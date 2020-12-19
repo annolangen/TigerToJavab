@@ -50,3 +50,20 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Ignore autoconf / automake files
+Makefile.in
+aclocal.m4
+configure
+build-aux/
+Makefile
+autom4te.cache/
+*.log
+config.status
+stamp-*
+config.h
+config.h.in
+src/.deps/
+
+# Binary
+src/tc
