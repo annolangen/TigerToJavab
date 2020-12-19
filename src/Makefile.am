@@ -1,2 +1,2 @@
 bin_PROGRAMS = tc
-tc_SOURCES = tc.cc
+tc_SOURCES = tc.cc BinaryOp.cc
