@@ -23,7 +23,7 @@ class TypeVisitor;
 
 class Type {
 public:
-  virtual ~Type() = 0;
+  virtual ~Type() = default;
   virtual bool Accept(TypeVisitor &visitor) const = 0;
 };
 
@@ -40,7 +40,7 @@ public:
 class TypeReference : public Type {
 public:
   TypeReference(std::string_view id) : id_(id) {}
-  virtual bool Accept(TypeVisitor &visitor) {
+  virtual bool Accept(TypeVisitor &visitor) const {
     return visitor.VisitTypeReference(id_);
   }
 
@@ -51,7 +51,7 @@ private:
 class RecordType : public Type {
 public:
   RecordType(std::vector<TypeField> &&fields) : fields_(std::move(fields)) {}
-  virtual bool Accept(TypeVisitor &visitor) {
+  virtual bool Accept(TypeVisitor &visitor) const {
     return visitor.VisitRecordType(fields_);
   }
 
@@ -243,7 +243,7 @@ private:
 class IntegerConstant : public Expression {
 public:
   IntegerConstant(int value) : value_(value) {}
-  virtual bool Accept(ExpressionVisitor &visitor) {
+  virtual bool Accept(ExpressionVisitor &visitor) const {
     return visitor.VisitIntegerConstant(value_);
   }
 
