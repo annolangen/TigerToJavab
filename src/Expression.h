@@ -62,7 +62,7 @@ private:
 class ArrayType : public Type {
 public:
   ArrayType(std::string_view type_id) : type_id_(type_id) {}
-  virtual bool Accept(TypeVisitor &visitor) {
+  virtual bool Accept(TypeVisitor &visitor) const {
     return visitor.VisitArrayType(type_id_);
   }
 

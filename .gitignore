@@ -64,6 +64,7 @@ stamp-*
 config.h
 config.h.in
 src/.deps/
+src/*.trs
 
 # Binary
 src/tc
