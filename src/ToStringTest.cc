@@ -9,7 +9,9 @@ SCENARIO("ToString produces strings for all our classes", "[ToString]") {
     WHEN("visited") {
       TypeVisitor visitor;
       record_type.Accept(visitor);
-      THEN("ToString is unaffected") { REQUIRE(ToString(record_type) == "{x: string, y: int}"); }
+      THEN("ToString is unaffected") {
+        REQUIRE(ToString(record_type) == "{x: string, y: int}");
+      }
     }
   }
 }
