@@ -1,5 +1,7 @@
+#pragma once
 #include <functional>
 #include <sstream>
+#include <string>
 
 // Defines public functions `map` and `join` to be used on the right hand side
 // of `operator|`.

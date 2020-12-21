@@ -6,7 +6,6 @@
 
 namespace {
 int GetSecond(const std::pair<int, int> &p) { return p.second; }
-} // namespace
 
 SCENARIO("util functions", "[util]") {
   GIVEN("A simple vector") {
@@ -22,3 +21,4 @@ SCENARIO("util functions", "[util]") {
             "100, 200");
   }
 }
+} // namespace

@@ -1,6 +1,6 @@
 #include "ToString.h"
 #include "testing/catch.h"
-
+namespace {
 SCENARIO("ToString produces strings for all our classes", "[ToString]") {
 
   GIVEN("A RecordType") {
@@ -37,3 +37,4 @@ SCENARIO("ToString produces strings for all our classes", "[ToString]") {
     }
   }
 }
+} // namespace
