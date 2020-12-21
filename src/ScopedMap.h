@@ -26,6 +26,11 @@ public:
     return {};
   }
 
+  // Returns true if the given key is bound in the currenr scope,
+  bool IsBound(const std::string &key) {
+    return maps_.rbegin()->count(key) == 1;
+  }
+
   // Adds or overwrites a new entry in the current scope
   T &operator[](std::string key) { return (*maps_.rbegin())[key]; }
 

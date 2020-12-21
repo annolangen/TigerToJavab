@@ -51,7 +51,7 @@ template <class C> struct JoinedRange {
 
 template <class F> internal::Mapped<F> map(F fn) { return {fn}; }
 
-internal::Joined join(const std::string &&sep) { return {sep}; }
+inline internal::Joined join(const std::string &&sep) { return {sep}; }
 
 } // namespace util
 
@@ -70,11 +70,11 @@ util::internal::JoinedRange<C> operator|(const C &container,
 template <class C>
 std::ostream &operator<<(std::ostream &os,
                          const util::internal::JoinedRange<C> &joined) {
-  static std::string empty;
-  std::string &sep = empty;
+  const static std::string empty;
+  const std::string *sep = &empty;
   for (const auto &item : joined.range) {
-    os << sep << item;
-    sep = joined.sep;
+    os << *sep << item;
+    sep = &joined.sep;
   }
   return os;
 }

@@ -30,10 +30,12 @@ public:
 class TypeVisitor {
 public:
   virtual bool VisitTypeReference(const std::string &id) { return true; }
-  virtual bool VisitRecordType(const std::vector<TypeField> fields) {
+  virtual bool VisitRecordType(const std::vector<TypeField> &fields) {
     return true;
   }
   virtual bool VisitArrayType(const std::string &type_id) { return true; }
+  virtual bool VisitInt() { return true; }
+  virtual bool VisitString() { return true; }
 };
 
 // Reference to a named type.
@@ -68,6 +70,18 @@ public:
 
 private:
   std::string type_id_;
+};
+
+class IntType {
+public:
+  virtual bool Accept(TypeVisitor &visitor) const { return visitor.VisitInt(); }
+};
+
+class StringType {
+public:
+  virtual bool Accept(TypeVisitor &visitor) const {
+    return visitor.VisitString();
+  }
 };
 
 // Forward declaration of visitor to navigate Declaration abstract syntax tree.
