@@ -224,8 +224,10 @@ public:
   }
   virtual bool VisitBreak() { return true; }
   virtual bool
-  VisitLet(const std::vector<std::unique_ptr<Declaration>> &declarations) {
-    return true;
+  VisitLet(const std::vector<std::unique_ptr<Declaration>> &declarations,
+           const std::vector<std::unique_ptr<Expression>> &body) {
+    return std::all_of(body.begin(), body.end(),
+                       [this](const auto &arg) { return arg->Accept(*this); });
   }
 };
 
@@ -480,12 +482,14 @@ public:
 
 class Let : public Expression {
 public:
-  Let(std::vector<std::unique_ptr<Declaration>> &&declarations)
-      : declarations_(std::move(declarations)) {}
+  Let(std::vector<std::unique_ptr<Declaration>> &&declarations,
+      std::vector<std::unique_ptr<Expression>> &&body)
+      : declarations_(std::move(declarations)), body_(std::move(body)) {}
   virtual bool Accept(ExpressionVisitor &visitor) const {
-    return visitor.VisitLet(declarations_);
+    return visitor.VisitLet(declarations_, body_);
   }
 
 private:
   std::vector<std::unique_ptr<Declaration>> declarations_;
+  std::vector<std::unique_ptr<Expression>> body_;
 };
