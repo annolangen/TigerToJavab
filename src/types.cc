@@ -41,7 +41,7 @@ public:
     return right.Accept(*this);
   }
   virtual bool VisitAssignment(const LValue &value, const Expression &expr) {
-    return SetType("int");
+    return SetType("none");
   }
   virtual bool
   VisitFunctionCall(const std::string &id,
@@ -104,7 +104,7 @@ public:
 namespace types {
 std::string InferType(const Expression &e) {
   std::string result;
-  InferExpressionVisitor visitor{result};
+  InferExpressionVisitor visitor(result);
   e.Accept(visitor);
   return result;
 }

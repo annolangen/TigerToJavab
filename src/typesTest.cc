@@ -16,11 +16,18 @@ SCENARIO("types functions", "[types]") {
     auto anArray = std::make_shared<Array>("IntArray", anInt, anInt);
     REQUIRE(InferType(*anArray) == "IntArray");
     std::vector<FieldValue> field_values;
-    field_values.push_back({"height", std::move(std::make_unique<IntegerConstant>(6))});
-    field_values.push_back({"weight", std::move(std::make_unique<IntegerConstant>(200))});
+    field_values.push_back(
+        {"height", std::move(std::make_unique<IntegerConstant>(6))});
+    field_values.push_back(
+        {"weight", std::move(std::make_unique<IntegerConstant>(200))});
     auto aRecord = std::make_shared<Record>("Bulk", std::move(field_values));
     REQUIRE(InferType(*aRecord) == "Bulk");
-
+    WHEN("composed") {
+      REQUIRE(InferType(Negated(anInt)) == "int");
+      REQUIRE(InferType(Binary(anInt, BinaryOp::kTimes, anInt)) == "int");
+      REQUIRE(InferType(Binary(aString, BinaryOp::kPlus, aString)) ==
+              "string");
+    }
     // Composite expressions
     // lvalue
     // - expr
