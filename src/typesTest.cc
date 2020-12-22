@@ -3,7 +3,6 @@
 namespace {
 using types::InferType;
 SCENARIO("types functions", "[types]") {
-
   GIVEN("Leaf expressions") {
     auto anInt = std::make_shared<IntegerConstant>(3);
     REQUIRE(InferType(*anInt) == "int");

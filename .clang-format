@@ -1,0 +1,4 @@
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+PointerAlignment: Left

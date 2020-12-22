@@ -25,14 +25,14 @@ template <class F, class I> struct MappedIterator {
     ++iter;
     return *this;
   }
-  bool operator!=(const MappedIterator &other) const {
+  bool operator!=(const MappedIterator& other) const {
     return iter != other.iter;
   }
   auto operator*() const { return fn(*iter); }
 };
 
 template <class F, class C> struct MappedRange {
-  const C &container;
+  const C& container;
   F fn;
   using Iterator = MappedIterator<F, decltype(container.begin())>;
   Iterator begin() const { return {container.begin(), fn}; }
@@ -47,34 +47,34 @@ struct Joined {
 
 template <class C> struct JoinedRange {
   std::string sep;
-  const C &range;
+  const C& range;
 };
 } // namespace internal
 
 template <class F> internal::Mapped<F> map(F fn) { return {fn}; }
 
-inline internal::Joined join(const std::string &&sep) { return {sep}; }
+inline internal::Joined join(const std::string&& sep) { return {sep}; }
 
 } // namespace util
 
 template <class F, class C>
-util::internal::MappedRange<F, C> operator|(const C &container,
+util::internal::MappedRange<F, C> operator|(const C& container,
                                             util::internal::Mapped<F> mapped) {
   return {container, mapped.fn};
 }
 
 template <class C>
-util::internal::JoinedRange<C> operator|(const C &container,
+util::internal::JoinedRange<C> operator|(const C& container,
                                          util::internal::Joined joined) {
   return {joined.sep, container};
 }
 
 template <class C>
-std::ostream &operator<<(std::ostream &os,
-                         const util::internal::JoinedRange<C> &joined) {
+std::ostream& operator<<(std::ostream& os,
+                         const util::internal::JoinedRange<C>& joined) {
   const static std::string empty;
-  const std::string *sep = &empty;
-  for (const auto &item : joined.range) {
+  const std::string* sep = &empty;
+  for (const auto& item : joined.range) {
     os << *sep << item;
     sep = &joined.sep;
   }

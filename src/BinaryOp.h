@@ -8,4 +8,4 @@ enum BinaryOp {
 #undef DEF_BINARY_OPERATOR
 };
 
-void AppendDebugString(BinaryOp op, std::string &out);
+void AppendDebugString(BinaryOp op, std::string& out);

@@ -1,7 +1,7 @@
 #include "ToString.h"
 #include "util.h"
 
-std::ostream &operator<<(std::ostream &os, const TypeField &f) {
+std::ostream& operator<<(std::ostream& os, const TypeField& f) {
   return os << f.id << ": " << f.type_id;
 }
 
@@ -10,18 +10,18 @@ using util::join;
 
 class AppendTypeVisitor : public TypeVisitor {
 public:
-  AppendTypeVisitor(std::ostream &os) : os_(os) {}
-  virtual bool VisitTypeReference(const std::string &id) {
+  AppendTypeVisitor(std::ostream& os) : os_(os) {}
+  virtual bool VisitTypeReference(const std::string& id) {
     os_ << id;
     return true;
   }
 
-  virtual bool VisitRecordType(const std::vector<TypeField> &fields) {
+  virtual bool VisitRecordType(const std::vector<TypeField>& fields) {
     os_ << "{" << (fields | join(", ")) << "}";
     return true;
   }
 
-  virtual bool VisitArrayType(const std::string &type_id) {
+  virtual bool VisitArrayType(const std::string& type_id) {
     os_ << "array of " << type_id;
     return true;
   }
@@ -37,17 +37,17 @@ public:
   }
 
 private:
-  std::ostream &os_;
+  std::ostream& os_;
 };
 
 } // namespace
 
-std::ostream &operator<<(std::ostream &os, const Type &t) {
+std::ostream& operator<<(std::ostream& os, const Type& t) {
   AppendTypeVisitor visitor(os);
   t.Accept(visitor);
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const Expression &e) { return os; }
+std::ostream& operator<<(std::ostream& os, const Expression& e) { return os; }
 
-std::ostream &operator<<(std::ostream &os, const Declaration &d) { return os; }
+std::ostream& operator<<(std::ostream& os, const Declaration& d) { return os; }

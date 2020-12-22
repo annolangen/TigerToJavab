@@ -9,6 +9,6 @@ template <class T> std::string ToString(T item) {
 }
 
 // Family of operators
-std::ostream &operator<<(std::ostream &os, const Type &e);
-std::ostream &operator<<(std::ostream &os, const Expression &t);
-std::ostream &operator<<(std::ostream &os, const Declaration &d);
+std::ostream& operator<<(std::ostream& os, const Type& e);
+std::ostream& operator<<(std::ostream& os, const Expression& t);
+std::ostream& operator<<(std::ostream& os, const Declaration& d);

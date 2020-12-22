@@ -2,7 +2,6 @@
 #include "testing/catch.h"
 namespace {
 SCENARIO("ToString produces strings for all our classes", "[ToString]") {
-
   GIVEN("A RecordType") {
     RecordType record_type({{"x", "string"}, {"y", "int"}});
     REQUIRE(ToString(record_type) == "{x: string, y: int}");

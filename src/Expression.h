@@ -24,16 +24,23 @@ class TypeVisitor;
 class Type {
 public:
   virtual ~Type() = default;
-  virtual bool Accept(TypeVisitor &visitor) const = 0;
+  virtual bool Accept(TypeVisitor& visitor) const = 0;
+  // Returns element type ID for an array type.
+  virtual std::optional<std::string_view> GetElementType() const { return {}; }
+  // Returns type ID for an field for a record type.
+  virtual std::optional<std::string_view>
+  GetFieldType(const std::string& field_id) const {
+    return {};
+  }
 };
 
 class TypeVisitor {
 public:
-  virtual bool VisitTypeReference(const std::string &id) { return true; }
-  virtual bool VisitRecordType(const std::vector<TypeField> &fields) {
+  virtual bool VisitTypeReference(const std::string& id) { return true; }
+  virtual bool VisitRecordType(const std::vector<TypeField>& fields) {
     return true;
   }
-  virtual bool VisitArrayType(const std::string &type_id) { return true; }
+  virtual bool VisitArrayType(const std::string& type_id) { return true; }
   virtual bool VisitInt() { return true; }
   virtual bool VisitString() { return true; }
 };
@@ -42,7 +49,7 @@ public:
 class TypeReference : public Type {
 public:
   TypeReference(std::string_view id) : id_(id) {}
-  virtual bool Accept(TypeVisitor &visitor) const {
+  virtual bool Accept(TypeVisitor& visitor) const {
     return visitor.VisitTypeReference(id_);
   }
 
@@ -52,9 +59,16 @@ private:
 
 class RecordType : public Type {
 public:
-  RecordType(std::vector<TypeField> &&fields) : fields_(std::move(fields)) {}
-  virtual bool Accept(TypeVisitor &visitor) const {
+  RecordType(std::vector<TypeField>&& fields) : fields_(std::move(fields)) {}
+  virtual bool Accept(TypeVisitor& visitor) const {
     return visitor.VisitRecordType(fields_);
+  }
+  virtual std::optional<std::string_view>
+  GetFieldType(const std::string& field_id) const {
+    for (const auto& f : fields_) {
+      if (f.id == field_id) return f.type_id;
+    }
+    return {};
   }
 
 private:
@@ -64,8 +78,11 @@ private:
 class ArrayType : public Type {
 public:
   ArrayType(std::string_view type_id) : type_id_(type_id) {}
-  virtual bool Accept(TypeVisitor &visitor) const {
+  virtual bool Accept(TypeVisitor& visitor) const {
     return visitor.VisitArrayType(type_id_);
+  }
+  virtual std::optional<std::string_view> GetElementType() const {
+    return type_id_;
   }
 
 private:
@@ -74,12 +91,12 @@ private:
 
 class IntType {
 public:
-  virtual bool Accept(TypeVisitor &visitor) const { return visitor.VisitInt(); }
+  virtual bool Accept(TypeVisitor& visitor) const { return visitor.VisitInt(); }
 };
 
 class StringType {
 public:
-  virtual bool Accept(TypeVisitor &visitor) const {
+  virtual bool Accept(TypeVisitor& visitor) const {
     return visitor.VisitString();
   }
 };
@@ -92,8 +109,10 @@ class Declaration {
 public:
   Declaration(std::string_view id) : id_(id) {}
   virtual ~Declaration() = default;
-  virtual bool Accept(DeclarationVisitor &visitor) const = 0;
-  const std::string &Id() const { return id_; }
+  virtual bool Accept(DeclarationVisitor& visitor) const = 0;
+  // Returns the type of a type declaration
+  virtual std::optional<const Type*> GetType() const { return {}; }
+  const std::string& Id() const { return id_; }
 
 private:
   std::string id_;
@@ -103,18 +122,18 @@ class Expression;
 
 class DeclarationVisitor {
 public:
-  virtual bool VisitTypeDeclaration(const std::string &id, const Type &type) {
+  virtual bool VisitTypeDeclaration(const std::string& id, const Type& type) {
     return true;
   }
   virtual bool
-  VisitVariableDeclaration(const std::string &id,
-                           const std::optional<std::string> &type_id,
-                           const Expression &expr) {
+  VisitVariableDeclaration(const std::string& id,
+                           const std::optional<std::string>& type_id,
+                           const Expression& expr) {
     return true;
   }
   virtual bool VisitFunctionDeclaration(
-      const std::string &id, const std::vector<TypeField> &params,
-      const std::optional<std::string> type_id, const Expression &body) {
+      const std::string& id, const std::vector<TypeField>& params,
+      const std::optional<std::string> type_id, const Expression& body) {
     return true;
   }
 };
@@ -123,9 +142,10 @@ class TypeDeclaration : public Declaration {
 public:
   TypeDeclaration(std::string_view type_id, std::shared_ptr<Type> type)
       : Declaration(type_id), type_(type) {}
-  virtual bool Accept(DeclarationVisitor &visitor) const {
+  virtual bool Accept(DeclarationVisitor& visitor) const {
     return visitor.VisitTypeDeclaration(Id(), *type_);
   }
+  virtual std::optional<const Type*> GetType() const { return type_.get(); }
 
 private:
   std::shared_ptr<Type> type_;
@@ -138,7 +158,7 @@ public:
   VariableDeclaration(std::string_view id, std::string_view type_id,
                       std::shared_ptr<Expression> expr)
       : Declaration(id), type_id_(type_id), expr_(expr) {}
-  virtual bool Accept(DeclarationVisitor &visitor) const {
+  virtual bool Accept(DeclarationVisitor& visitor) const {
     return visitor.VisitVariableDeclaration(Id(), type_id_, *expr_);
   }
 
@@ -149,15 +169,15 @@ private:
 
 class FunctionDeclaration : public Declaration {
 public:
-  FunctionDeclaration(std::string_view id, std::vector<TypeField> &&params,
+  FunctionDeclaration(std::string_view id, std::vector<TypeField>&& params,
                       std::shared_ptr<Expression> body)
       : Declaration(id), params_(std::move(params)), body_(body) {}
-  FunctionDeclaration(std::string_view id, std::vector<TypeField> &&params,
+  FunctionDeclaration(std::string_view id, std::vector<TypeField>&& params,
                       std::string_view type_id,
                       std::shared_ptr<Expression> body)
       : Declaration(id), type_id_(type_id), params_(std::move(params)),
         body_(body) {}
-  virtual bool Accept(DeclarationVisitor &visitor) const {
+  virtual bool Accept(DeclarationVisitor& visitor) const {
     return visitor.VisitFunctionDeclaration(Id(), params_, type_id_, *body_);
   }
 
@@ -175,7 +195,7 @@ class ExpressionVisitor;
 class Expression {
 public:
   virtual ~Expression() = default;
-  virtual bool Accept(ExpressionVisitor &visitor) const = 0;
+  virtual bool Accept(ExpressionVisitor& visitor) const = 0;
 };
 
 struct FieldValue {
@@ -189,69 +209,69 @@ class LValue;
 // successfully visiting all child Expressions.
 class ExpressionVisitor {
 public:
-  virtual bool VisitStringConstant(const std::string &text) { return true; }
+  virtual bool VisitStringConstant(const std::string& text) { return true; }
   virtual bool VisitIntegerConstant(int value) { return true; }
   virtual bool VisitNil() { return true; }
-  virtual bool VisitLValue(const LValue &value) { return true; }
-  virtual bool VisitNegated(const Expression &value) {
+  virtual bool VisitLValue(const LValue& value) { return true; }
+  virtual bool VisitNegated(const Expression& value) {
     return value.Accept(*this);
   }
-  virtual bool VisitBinary(const Expression &left, BinaryOp op,
-                           const Expression &right) {
+  virtual bool VisitBinary(const Expression& left, BinaryOp op,
+                           const Expression& right) {
     return left.Accept(*this) && right.Accept(*this);
   }
-  virtual bool VisitAssignment(const LValue &value, const Expression &expr) {
+  virtual bool VisitAssignment(const LValue& value, const Expression& expr) {
     return expr.Accept(*this);
   }
   virtual bool
-  VisitFunctionCall(const std::string &id,
-                    const std::vector<std::shared_ptr<Expression>> &args) {
+  VisitFunctionCall(const std::string& id,
+                    const std::vector<std::shared_ptr<Expression>>& args) {
     return std::all_of(args.begin(), args.end(),
-                       [this](const auto &arg) { return arg->Accept(*this); });
+                       [this](const auto& arg) { return arg->Accept(*this); });
   }
   virtual bool
-  VisitBlock(const std::vector<std::shared_ptr<Expression>> &exprs) {
+  VisitBlock(const std::vector<std::shared_ptr<Expression>>& exprs) {
     return std::all_of(exprs.begin(), exprs.end(),
-                       [this](const auto &arg) { return arg->Accept(*this); });
+                       [this](const auto& arg) { return arg->Accept(*this); });
   }
-  virtual bool VisitRecord(const std::string &type_id,
-                           const std::vector<FieldValue> &field_values) {
+  virtual bool VisitRecord(const std::string& type_id,
+                           const std::vector<FieldValue>& field_values) {
     return true;
   }
-  virtual bool VisitArray(const std::string &type_id, const Expression &size,
-                          const Expression &value) {
+  virtual bool VisitArray(const std::string& type_id, const Expression& size,
+                          const Expression& value) {
     return size.Accept(*this) && value.Accept(*this);
   }
-  virtual bool VisitIfThen(const Expression &condition,
-                           const Expression &expr) {
+  virtual bool VisitIfThen(const Expression& condition,
+                           const Expression& expr) {
     return condition.Accept(*this) && expr.Accept(*this);
   }
-  virtual bool VisitIfThenElse(const Expression &condition,
-                               const Expression &then_expr,
-                               const Expression &else_expr) {
+  virtual bool VisitIfThenElse(const Expression& condition,
+                               const Expression& then_expr,
+                               const Expression& else_expr) {
     return condition.Accept(*this) && then_expr.Accept(*this) &&
            else_expr.Accept(*this);
   }
-  virtual bool VisitWhile(const Expression &condition, const Expression &body) {
+  virtual bool VisitWhile(const Expression& condition, const Expression& body) {
     return condition.Accept(*this) && body.Accept(*this);
   }
-  virtual bool VisitFor(const std::string &id, const Expression &first,
-                        const Expression &last, const Expression &body) {
+  virtual bool VisitFor(const std::string& id, const Expression& first,
+                        const Expression& last, const Expression& body) {
     return first.Accept(*this) && last.Accept(*this) && body.Accept(*this);
   }
   virtual bool VisitBreak() { return true; }
   virtual bool
-  VisitLet(const std::vector<std::unique_ptr<Declaration>> &declarations,
-           const std::vector<std::unique_ptr<Expression>> &body) {
+  VisitLet(const std::vector<std::unique_ptr<Declaration>>& declarations,
+           const std::vector<std::unique_ptr<Expression>>& body) {
     return std::all_of(body.begin(), body.end(),
-                       [this](const auto &arg) { return arg->Accept(*this); });
+                       [this](const auto& arg) { return arg->Accept(*this); });
   }
 };
 
 class StringConstant : public Expression {
 public:
   StringConstant(std::string_view text) : text_(text) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitStringConstant(text_);
   }
 
@@ -262,7 +282,7 @@ private:
 class IntegerConstant : public Expression {
 public:
   IntegerConstant(int value) : value_(value) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitIntegerConstant(value_);
   }
 
@@ -273,7 +293,7 @@ private:
 class Nil : public Expression {
 public:
   Nil() {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitNil();
   }
 };
@@ -282,27 +302,27 @@ class LValueVisitor;
 
 class LValue : public Expression {
 public:
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitLValue(*this);
   }
-  virtual bool Accept(LValueVisitor &visitor) const = 0;
+  virtual bool Accept(LValueVisitor& visitor) const = 0;
   // Returns ID, if this L-value is an IdLValue.
   virtual std::optional<std::string> GetId() { return {}; }
   // Returns field ID, if this L-value is an field.
   virtual std::optional<std::string> GetField() { return {}; }
   // Returns index value, if this L-value is an IndexLValue.
-  virtual std::optional<const Expression *> GetIndexValue() { return {}; }
+  virtual std::optional<const Expression*> GetIndexValue() { return {}; }
   // Returns child LValue for FieldLValue or IndexLValue
-  virtual std::optional<const LValue *> GetChild() { return {}; }
+  virtual std::optional<const LValue*> GetChild() { return {}; }
 };
 
 class LValueVisitor {
 public:
-  virtual bool VisitId(const std::string &id) { return true; }
-  virtual bool VisitField(const LValue &value, const std::string &id) {
+  virtual bool VisitId(const std::string& id) { return true; }
+  virtual bool VisitField(const LValue& value, const std::string& id) {
     return value.Accept(*this);
   }
-  virtual bool VisitIndex(const LValue &value, const Expression &expr) {
+  virtual bool VisitIndex(const LValue& value, const Expression& expr) {
     return value.Accept(*this);
   }
 };
@@ -310,7 +330,7 @@ public:
 class IdLValue : public LValue {
 public:
   IdLValue(std::string_view id) : id_(id) {}
-  virtual bool Accept(LValueVisitor &visitor) const {
+  virtual bool Accept(LValueVisitor& visitor) const {
     return visitor.VisitId(id_);
   }
   virtual std::optional<std::string> GetId() { return id_; }
@@ -323,11 +343,11 @@ class FieldLValue : public LValue {
 public:
   FieldLValue(std::shared_ptr<LValue> value, std::string_view id)
       : value_(value), id_(id) {}
-  virtual bool Accept(LValueVisitor &visitor) const {
+  virtual bool Accept(LValueVisitor& visitor) const {
     return visitor.VisitField(*value_, id_);
   }
   virtual std::optional<std::string> GetFieldId() { return id_; }
-  virtual std::optional<const LValue *> GetChild() { return value_.get(); }
+  virtual std::optional<const LValue*> GetChild() { return value_.get(); }
 
 private:
   std::shared_ptr<LValue> value_;
@@ -338,13 +358,13 @@ class IndexLValue : public LValue {
 public:
   IndexLValue(std::shared_ptr<LValue> value, std::shared_ptr<Expression> expr)
       : value_(value), expr_(expr) {}
-  virtual bool Accept(LValueVisitor &visitor) const {
+  virtual bool Accept(LValueVisitor& visitor) const {
     return visitor.VisitIndex(*value_, *expr_);
   }
-  virtual std::optional<const Expression *> GetIndexValue() {
+  virtual std::optional<const Expression*> GetIndexValue() {
     return expr_.get();
   }
-  virtual std::optional<const LValue *> GetChild() { return value_.get(); }
+  virtual std::optional<const LValue*> GetChild() { return value_.get(); }
 
 private:
   std::shared_ptr<LValue> value_;
@@ -354,7 +374,7 @@ private:
 class Negated : public Expression {
 public:
   Negated(std::shared_ptr<Expression> expr) : expr_(expr) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitNegated(*expr_);
   }
 
@@ -367,7 +387,7 @@ public:
   Binary(std::shared_ptr<Expression> left, BinaryOp op,
          std::shared_ptr<Expression> right)
       : left_(left), op_(op), right_(right) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitBinary(*left_, op_, *right_);
   }
 
@@ -381,7 +401,7 @@ class Assignment : public Expression {
 public:
   Assignment(std::shared_ptr<LValue> value, std::shared_ptr<Expression> expr)
       : value_(value), expr_(expr) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitAssignment(*value_, *expr_);
   }
 
@@ -392,9 +412,9 @@ private:
 
 class FunctionCall : public Expression {
   FunctionCall(std::string_view id,
-               std::vector<std::shared_ptr<Expression>> &&args)
+               std::vector<std::shared_ptr<Expression>>&& args)
       : id_(id), args_(std::move(args)) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitFunctionCall(id_, args_);
   }
 
@@ -406,9 +426,9 @@ private:
 // From syntax for bracketed sequence `( expr-seq_opt )`.
 class Block : public Expression {
 public:
-  Block(std::vector<std::shared_ptr<Expression>> &&exprs)
+  Block(std::vector<std::shared_ptr<Expression>>&& exprs)
       : exprs_(std::move(exprs)) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitBlock(exprs_);
   }
 
@@ -419,9 +439,9 @@ private:
 // Record literal
 class Record : public Expression {
 public:
-  Record(std::string_view type_id, std::vector<FieldValue> &&field_values)
+  Record(std::string_view type_id, std::vector<FieldValue>&& field_values)
       : type_id_(type_id), field_values_(std::move(field_values)) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitRecord(type_id_, field_values_);
   }
 
@@ -436,7 +456,7 @@ public:
   Array(std::string_view type_id, std::shared_ptr<Expression> size,
         std::shared_ptr<Expression> value)
       : type_id_(type_id), size_(size), value_(value) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitArray(type_id_, *size_, *value_);
   }
 
@@ -451,7 +471,7 @@ public:
   IfThen(std::shared_ptr<Expression> condition,
          std::shared_ptr<Expression> expr)
       : condition_(condition), expr_(expr) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitIfThen(*condition_, *expr_);
   }
 
@@ -466,7 +486,7 @@ public:
              std::shared_ptr<Expression> then_expr,
              std::shared_ptr<Expression> else_expr)
       : condition_(condition), then_expr_(then_expr), else_expr_(else_expr) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitIfThenElse(*condition_, *then_expr_, *else_expr_);
   }
 
@@ -480,7 +500,7 @@ class While : public Expression {
 public:
   While(std::shared_ptr<Expression> condition, std::shared_ptr<Expression> body)
       : condition_(condition), body_(body) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitWhile(*condition_, *body_);
   }
 
@@ -494,7 +514,7 @@ public:
   For(std::string_view id, std::shared_ptr<Expression> first,
       std::shared_ptr<Expression> last, std::shared_ptr<Expression> body)
       : id_(id), first_(first), last_(last), body_(body) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitFor(id_, *first_, *last_, *body_);
   }
 
@@ -508,17 +528,17 @@ private:
 class Break : public Expression {
 public:
   Break() {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitBreak();
   }
 };
 
 class Let : public Expression {
 public:
-  Let(std::vector<std::unique_ptr<Declaration>> &&declarations,
-      std::vector<std::unique_ptr<Expression>> &&body)
+  Let(std::vector<std::unique_ptr<Declaration>>&& declarations,
+      std::vector<std::unique_ptr<Expression>>&& body)
       : declarations_(std::move(declarations)), body_(std::move(body)) {}
-  virtual bool Accept(ExpressionVisitor &visitor) const {
+  virtual bool Accept(ExpressionVisitor& visitor) const {
     return visitor.VisitLet(declarations_, body_);
   }
 
