@@ -27,10 +27,7 @@ EnterScope(const std::vector<std::unique_ptr<Declaration>>& declarations,
            ScopedMap<T>& map) {
   map.EnterScope();
   for (const auto& d : declarations) {
-    auto t = fn(*d);
-    if (t) {
-      map[d->Id()] = *t;
-    }
+    if (auto t = fn(*d); t) map[d->Id()] = *t;
   }
   return map;
 }
