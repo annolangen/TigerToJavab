@@ -90,8 +90,13 @@ class DeclarationVisitor;
 // Abstract base class for Declarations
 class Declaration {
 public:
+  Declaration(std::string_view id) : id_(id) {}
   virtual ~Declaration() = default;
   virtual bool Accept(DeclarationVisitor &visitor) const = 0;
+  const std::string &Id() const { return id_; }
+
+private:
+  std::string id_;
 };
 
 class Expression;
@@ -117,29 +122,27 @@ public:
 class TypeDeclaration : public Declaration {
 public:
   TypeDeclaration(std::string_view type_id, std::shared_ptr<Type> type)
-      : type_id_(type_id), type_(type) {}
+      : Declaration(type_id), type_(type) {}
   virtual bool Accept(DeclarationVisitor &visitor) const {
-    return visitor.VisitTypeDeclaration(type_id_, *type_);
+    return visitor.VisitTypeDeclaration(Id(), *type_);
   }
 
 private:
-  std::string type_id_;
   std::shared_ptr<Type> type_;
 };
 
 class VariableDeclaration : public Declaration {
 public:
   VariableDeclaration(std::string_view id, std::shared_ptr<Expression> expr)
-      : id_(id), expr_(expr) {}
+      : Declaration(id), expr_(expr) {}
   VariableDeclaration(std::string_view id, std::string_view type_id,
                       std::shared_ptr<Expression> expr)
-      : id_(id), type_id_(type_id), expr_(expr) {}
+      : Declaration(id), type_id_(type_id), expr_(expr) {}
   virtual bool Accept(DeclarationVisitor &visitor) const {
-    return visitor.VisitVariableDeclaration(id_, type_id_, *expr_);
+    return visitor.VisitVariableDeclaration(Id(), type_id_, *expr_);
   }
 
 private:
-  std::string id_;
   std::optional<std::string> type_id_;
   std::shared_ptr<Expression> expr_;
 };
@@ -148,17 +151,17 @@ class FunctionDeclaration : public Declaration {
 public:
   FunctionDeclaration(std::string_view id, std::vector<TypeField> &&params,
                       std::shared_ptr<Expression> body)
-      : id_(id), params_(std::move(params)), body_(body) {}
+      : Declaration(id), params_(std::move(params)), body_(body) {}
   FunctionDeclaration(std::string_view id, std::vector<TypeField> &&params,
                       std::string_view type_id,
                       std::shared_ptr<Expression> body)
-      : id_(id), type_id_(type_id), params_(std::move(params)), body_(body) {}
+      : Declaration(id), type_id_(type_id), params_(std::move(params)),
+        body_(body) {}
   virtual bool Accept(DeclarationVisitor &visitor) const {
-    return visitor.VisitFunctionDeclaration(id_, params_, type_id_, *body_);
+    return visitor.VisitFunctionDeclaration(Id(), params_, type_id_, *body_);
   }
 
 private:
-  std::string id_;
   std::vector<TypeField> params_;
   std::optional<std::string> type_id_;
   std::shared_ptr<Expression> body_;
@@ -283,6 +286,14 @@ public:
     return visitor.VisitLValue(*this);
   }
   virtual bool Accept(LValueVisitor &visitor) const = 0;
+  // Returns ID, if this L-value is an IdLValue.
+  virtual std::optional<std::string> GetId() { return {}; }
+  // Returns field ID, if this L-value is an field.
+  virtual std::optional<std::string> GetField() { return {}; }
+  // Returns index value, if this L-value is an IndexLValue.
+  virtual std::optional<const Expression *> GetIndexValue() { return {}; }
+  // Returns child LValue for FieldLValue or IndexLValue
+  virtual std::optional<const LValue *> GetChild() { return {}; }
 };
 
 class LValueVisitor {
@@ -302,6 +313,7 @@ public:
   virtual bool Accept(LValueVisitor &visitor) const {
     return visitor.VisitId(id_);
   }
+  virtual std::optional<std::string> GetId() { return id_; }
 
 private:
   std::string id_;
@@ -314,6 +326,8 @@ public:
   virtual bool Accept(LValueVisitor &visitor) const {
     return visitor.VisitField(*value_, id_);
   }
+  virtual std::optional<std::string> GetFieldId() { return id_; }
+  virtual std::optional<const LValue *> GetChild() { return value_.get(); }
 
 private:
   std::shared_ptr<LValue> value_;
@@ -327,6 +341,10 @@ public:
   virtual bool Accept(LValueVisitor &visitor) const {
     return visitor.VisitIndex(*value_, *expr_);
   }
+  virtual std::optional<const Expression *> GetIndexValue() {
+    return expr_.get();
+  }
+  virtual std::optional<const LValue *> GetChild() { return value_.get(); }
 
 private:
   std::shared_ptr<LValue> value_;

@@ -1,31 +1,60 @@
 #include "types.h"
 #include "ScopedMap.h"
-#include <iostream>
 
 namespace {
 using types::InferType;
 
-// Visitor that binds the type of a declared value to the declaration ID.
-class ValueTypeDeclarationVisitor : public DeclarationVisitor {
+// TODO remove this
+// Visitor that infers the type of an L-value in the context of
+// declarations. Writes the inferred type to string `type`.
+//
+class InferLValueVisitor : public LValueVisitor {
 public:
-  ValueTypeDeclarationVisitor(ScopedMap<std::string> &env) : env_(env) {}
+  InferLValueVisitor(const ScopedMap<std::string> &inferred_type_by_name,
+                     const ScopedMap<const Type *> &declared_type_by_name,
+                     std::string &type)
+      : inferred_type_by_name_(inferred_type_by_name),
+        declared_type_by_name_(declared_type_by_name), type_(type) {}
+  virtual bool VisitId(const std::string &id) {
+    auto found = inferred_type_by_name_.Lookup(id);
+    type_ = found ? **found : "none";
+    return true;
+  }
+  virtual bool VisitField(const LValue &value, const std::string &id) {
+
+    return value.Accept(*this);
+  }
+  virtual bool VisitIndex(const LValue &value, const Expression &expr) {
+    return value.Accept(*this);
+  }
+
+private:
+  const ScopedMap<std::string> &inferred_type_by_name_;
+  const ScopedMap<const Type *> &declared_type_by_name_;
+  std::string &type_;
+}; // namespace
+
+// Visitor that binds the type of a declared value to the declaration ID.
+class InferDeclarationVisitor : public DeclarationVisitor {
+public:
+  InferDeclarationVisitor(ScopedMap<std::string> &inferred_type_by_name)
+      : inferred_type_by_name_(inferred_type_by_name) {}
   virtual bool
   VisitVariableDeclaration(const std::string &id,
                            const std::optional<std::string> &type_id,
                            const Expression &expr) {
-    env_[id] = type_id ? *type_id : InferType(expr);
-    std::cout << "Inserted " << id << "->" << env_[id] << std::endl;
+    inferred_type_by_name_[id] = type_id ? *type_id : InferType(expr);
     return true;
   }
   virtual bool VisitFunctionDeclaration(
       const std::string &id, const std::vector<TypeField> &params,
       const std::optional<std::string> type_id, const Expression &body) {
-    env_[id] = type_id ? *type_id : InferType(body);
+    inferred_type_by_name_[id] = type_id ? *type_id : InferType(body);
     return true;
   }
 
 private:
-  ScopedMap<std::string> &env_;
+  ScopedMap<std::string> &inferred_type_by_name_;
 };
 
 class InferExpressionVisitor : public ExpressionVisitor {
@@ -88,10 +117,10 @@ public:
     }
     type_by_name_.EnterScope();
     for (const auto &d : declarations) {
-      ValueTypeDeclarationVisitor visitor(type_by_name_);
+      InferDeclarationVisitor visitor(type_by_name_);
       d->Accept(visitor);
     }
-    type_ = (*body.rbegin())->Accept(*this);
+    (*body.rbegin())->Accept(*this);
     type_by_name_.ExitScope();
     return true;
   }

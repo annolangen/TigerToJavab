@@ -47,8 +47,7 @@ SCENARIO("types functions", "[types]") {
         std::vector<std::unique_ptr<Expression>> body;
         body.push_back(std::make_unique<IdLValue>("n"));
         Let let(std::move(declarations), std::move(body));
-	// TODO get this working
-        // REQUIRE(InferType(let) == "int");
+        REQUIRE(InferType(let) == "int");
       }
     }
 
