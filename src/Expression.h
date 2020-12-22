@@ -90,7 +90,7 @@ class DeclarationVisitor;
 // Abstract base class for Declarations
 class Declaration {
 public:
-  virtual ~Declaration() = 0;
+  virtual ~Declaration() = default;
   virtual bool Accept(DeclarationVisitor &visitor) const = 0;
 };
 
@@ -387,6 +387,7 @@ private:
 
 // From syntax for bracketed sequence `( expr-seq_opt )`.
 class Block : public Expression {
+public:
   Block(std::vector<std::shared_ptr<Expression>> &&exprs)
       : exprs_(std::move(exprs)) {}
   virtual bool Accept(ExpressionVisitor &visitor) const {

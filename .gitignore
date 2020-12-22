@@ -69,6 +69,7 @@ src/*.trs
 # Binary
 src/tc
 src/tc_test
+build/
 
 # IDE
 .vscode

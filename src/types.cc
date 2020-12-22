@@ -1,5 +1,6 @@
 #include "types.h"
 #include "ScopedMap.h"
+#include <iostream>
 
 namespace {
 using types::InferType;
@@ -13,6 +14,7 @@ public:
                            const std::optional<std::string> &type_id,
                            const Expression &expr) {
     env_[id] = type_id ? *type_id : InferType(expr);
+    std::cout << "Inserted " << id << "->" << env_[id] << std::endl;
     return true;
   }
   virtual bool VisitFunctionDeclaration(
