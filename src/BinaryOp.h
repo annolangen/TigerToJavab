@@ -1,4 +1,5 @@
 #pragma once
+#include <ostream>
 #include <string>
 
 enum BinaryOp {
@@ -8,4 +9,4 @@ enum BinaryOp {
 #undef DEF_BINARY_OPERATOR
 };
 
-void AppendDebugString(BinaryOp op, std::string& out);
+std::ostream& operator<<(std::ostream& os, BinaryOp op);

@@ -1,15 +1,14 @@
 #include "BinaryOp.h"
 
-void AppendDebugString(BinaryOp op, std::string& out) {
+std::ostream& operator<<(std::ostream& os, BinaryOp op) {
   switch (op) {
   case kNone:
-    out += "<NONE>";
-    return;
+    return os << "<NONE>";
 #define DEF_BINARY_OPERATOR(c, n)                                              \
   case c:                                                                      \
-    out += n;                                                                  \
-    return;
+    return os << n;
 #include "binary_operator.defs"
 #undef DEF_BINARY_OPERATOR
   }
+  return os;
 }

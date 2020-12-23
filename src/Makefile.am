@@ -1,4 +1,4 @@
-tc_srcs = BinaryOp.cc ToString.cc types.cc
+tc_srcs = BinaryOp.cc ToString.cc types.cc scanner.ll parser.yy driver.cc
 
 bin_PROGRAMS = tc
 tc_SOURCES = tc.cc $(tc_srcs)
@@ -11,5 +11,3 @@ tc_test_SOURCES += utilTest.cc
 tc_test_SOURCES += typesTest.cc
 
 TESTS = $(check_PROGRAMS)
-
-
