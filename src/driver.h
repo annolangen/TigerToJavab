@@ -1,7 +1,7 @@
 #ifndef DRIVER_HH
 #define DRIVER_HH
-#include "parser.hh"
 #include "Expression.h"
+#include "parser.hh"
 #include <map>
 #include <string>
 // Tell Flex the lexer's prototype ...

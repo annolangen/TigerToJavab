@@ -1,11 +1,18 @@
 #include "types.h"
 #include "testing/catch.h"
+#include "testing/testing.h"
 namespace {
 using types::InferType;
+
+void HasType(const std::string& text, const std::string& type) {
+  auto e = testing::Parse(text);
+  REQUIRE(InferType(*e) == type);
+}
+
 SCENARIO("types functions", "[types]") {
   GIVEN("Leaf expressions") {
     auto anInt = std::make_shared<IntegerConstant>(3);
-    REQUIRE(InferType(*anInt) == "int");
+    HasType("3", "int");
     auto aString = std::make_shared<StringConstant>("Hello");
     REQUIRE(InferType(*aString) == "string");
     auto aNil = std::make_shared<Nil>();
@@ -49,7 +56,9 @@ SCENARIO("types functions", "[types]") {
         REQUIRE(InferType(let) == "int");
       }
     }
-
+    GIVEN("Parsed test") {
+      HasType("1+1", "int");
+    }
     // Composite expressions
     // lvalue
     // lvalue := expr
