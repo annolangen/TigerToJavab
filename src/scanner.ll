@@ -24,14 +24,14 @@ blank [ \t]
 
 %{
   // Code run each time a pattern is matched.
-  # define YY_USER_ACTION  loc.columns (yyleng);
+  # define YY_USER_ACTION  loc.columns(yyleng);
 %}
 
 %%
 
 %{
   // Code run each time yylex is called.
-  loc.step ();
+  loc.step();
 %}
 
 {blank}+   loc.step ();

@@ -60,11 +60,11 @@ private:
 class RecordType : public Type {
 public:
   RecordType(std::vector<TypeField>&& fields) : fields_(std::move(fields)) {}
-  virtual bool Accept(TypeVisitor& visitor) const {
+  bool Accept(TypeVisitor& visitor) const override {
     return visitor.VisitRecordType(fields_);
   }
-  virtual std::optional<std::string_view>
-  GetFieldType(const std::string& field_id) const {
+  std::optional<std::string_view>
+  GetFieldType(const std::string& field_id) const override {
     for (const auto& f : fields_) {
       if (f.id == field_id) return f.type_id;
     }
@@ -78,10 +78,10 @@ private:
 class ArrayType : public Type {
 public:
   ArrayType(std::string_view type_id) : type_id_(type_id) {}
-  virtual bool Accept(TypeVisitor& visitor) const {
+  bool Accept(TypeVisitor& visitor) const override {
     return visitor.VisitArrayType(type_id_);
   }
-  virtual std::optional<std::string_view> GetElementType() const {
+  std::optional<std::string_view> GetElementType() const override {
     return type_id_;
   }
 
@@ -89,14 +89,16 @@ private:
   std::string type_id_;
 };
 
-class IntType {
+class IntType : public Type {
 public:
-  virtual bool Accept(TypeVisitor& visitor) const { return visitor.VisitInt(); }
+  bool Accept(TypeVisitor& visitor) const override {
+    return visitor.VisitInt();
+  }
 };
 
-class StringType {
+class StringType : public Type {
 public:
-  virtual bool Accept(TypeVisitor& visitor) const {
+  bool Accept(TypeVisitor& visitor) const override {
     return visitor.VisitString();
   }
 };
@@ -142,10 +144,10 @@ class TypeDeclaration : public Declaration {
 public:
   TypeDeclaration(std::string_view type_id, std::shared_ptr<Type> type)
       : Declaration(type_id), type_(type) {}
-  virtual bool Accept(DeclarationVisitor& visitor) const {
+  bool Accept(DeclarationVisitor& visitor) const override {
     return visitor.VisitTypeDeclaration(Id(), *type_);
   }
-  virtual std::optional<const Type*> GetType() const { return type_.get(); }
+  std::optional<const Type*> GetType() const override { return type_.get(); }
 
 private:
   std::shared_ptr<Type> type_;
@@ -158,7 +160,7 @@ public:
   VariableDeclaration(std::string_view id, std::string_view type_id,
                       std::shared_ptr<Expression> expr)
       : Declaration(id), type_id_(type_id), expr_(expr) {}
-  virtual bool Accept(DeclarationVisitor& visitor) const {
+  bool Accept(DeclarationVisitor& visitor) const override {
     return visitor.VisitVariableDeclaration(Id(), type_id_, *expr_);
   }
 
@@ -177,7 +179,7 @@ public:
                       std::shared_ptr<Expression> body)
       : Declaration(id), type_id_(type_id), params_(std::move(params)),
         body_(body) {}
-  virtual bool Accept(DeclarationVisitor& visitor) const {
+  bool Accept(DeclarationVisitor& visitor) const override {
     return visitor.VisitFunctionDeclaration(Id(), params_, type_id_, *body_);
   }
 
@@ -271,7 +273,7 @@ public:
 class StringConstant : public Expression {
 public:
   StringConstant(std::string_view text) : text_(text) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitStringConstant(text_);
   }
 
@@ -282,7 +284,7 @@ private:
 class IntegerConstant : public Expression {
 public:
   IntegerConstant(int value) : value_(value) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitIntegerConstant(value_);
   }
 
@@ -293,7 +295,7 @@ private:
 class Nil : public Expression {
 public:
   Nil() {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitNil();
   }
 };
@@ -302,18 +304,18 @@ class LValueVisitor;
 
 class LValue : public Expression {
 public:
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitLValue(*this);
   }
   virtual bool Accept(LValueVisitor& visitor) const = 0;
   // Returns ID, if this L-value is an IdLValue.
-  virtual std::optional<std::string> GetId() { return {}; }
+  virtual std::optional<std::string> GetId() const { return {}; }
   // Returns field ID, if this L-value is an field.
-  virtual std::optional<std::string> GetField() { return {}; }
+  virtual std::optional<std::string> GetField() const { return {}; }
   // Returns index value, if this L-value is an IndexLValue.
-  virtual std::optional<const Expression*> GetIndexValue() { return {}; }
+  virtual std::optional<const Expression*> GetIndexValue() const { return {}; }
   // Returns child LValue for FieldLValue or IndexLValue
-  virtual std::optional<const LValue*> GetChild() { return {}; }
+  virtual std::optional<const LValue*> GetChild() const { return {}; }
 };
 
 class LValueVisitor {
@@ -330,10 +332,10 @@ public:
 class IdLValue : public LValue {
 public:
   IdLValue(std::string_view id) : id_(id) {}
-  virtual bool Accept(LValueVisitor& visitor) const {
+  bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitId(id_);
   }
-  virtual std::optional<std::string> GetId() { return id_; }
+  std::optional<std::string> GetId() const override { return id_; }
 
 private:
   std::string id_;
@@ -343,11 +345,13 @@ class FieldLValue : public LValue {
 public:
   FieldLValue(std::shared_ptr<LValue> value, std::string_view id)
       : value_(value), id_(id) {}
-  virtual bool Accept(LValueVisitor& visitor) const {
+  bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitField(*value_, id_);
   }
-  virtual std::optional<std::string> GetFieldId() { return id_; }
-  virtual std::optional<const LValue*> GetChild() { return value_.get(); }
+  std::optional<std::string> GetField() const override { return id_; }
+  std::optional<const LValue*> GetChild() const override {
+    return value_.get();
+  }
 
 private:
   std::shared_ptr<LValue> value_;
@@ -358,13 +362,15 @@ class IndexLValue : public LValue {
 public:
   IndexLValue(std::shared_ptr<LValue> value, std::shared_ptr<Expression> expr)
       : value_(value), expr_(expr) {}
-  virtual bool Accept(LValueVisitor& visitor) const {
+  bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitIndex(*value_, *expr_);
   }
-  virtual std::optional<const Expression*> GetIndexValue() {
+  std::optional<const Expression*> GetIndexValue() const override {
     return expr_.get();
   }
-  virtual std::optional<const LValue*> GetChild() { return value_.get(); }
+  std::optional<const LValue*> GetChild() const override {
+    return value_.get();
+  }
 
 private:
   std::shared_ptr<LValue> value_;
@@ -374,7 +380,7 @@ private:
 class Negated : public Expression {
 public:
   Negated(std::shared_ptr<Expression> expr) : expr_(expr) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitNegated(*expr_);
   }
 
@@ -387,7 +393,7 @@ public:
   Binary(std::shared_ptr<Expression> left, BinaryOp op,
          std::shared_ptr<Expression> right)
       : left_(left), op_(op), right_(right) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitBinary(*left_, op_, *right_);
   }
 
@@ -401,7 +407,7 @@ class Assignment : public Expression {
 public:
   Assignment(std::shared_ptr<LValue> value, std::shared_ptr<Expression> expr)
       : value_(value), expr_(expr) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitAssignment(*value_, *expr_);
   }
 
@@ -414,7 +420,7 @@ class FunctionCall : public Expression {
   FunctionCall(std::string_view id,
                std::vector<std::shared_ptr<Expression>>&& args)
       : id_(id), args_(std::move(args)) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitFunctionCall(id_, args_);
   }
 
@@ -428,7 +434,7 @@ class Block : public Expression {
 public:
   Block(std::vector<std::shared_ptr<Expression>>&& exprs)
       : exprs_(std::move(exprs)) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitBlock(exprs_);
   }
 
@@ -441,7 +447,7 @@ class Record : public Expression {
 public:
   Record(std::string_view type_id, std::vector<FieldValue>&& field_values)
       : type_id_(type_id), field_values_(std::move(field_values)) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitRecord(type_id_, field_values_);
   }
 
@@ -456,7 +462,7 @@ public:
   Array(std::string_view type_id, std::shared_ptr<Expression> size,
         std::shared_ptr<Expression> value)
       : type_id_(type_id), size_(size), value_(value) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitArray(type_id_, *size_, *value_);
   }
 
@@ -471,7 +477,7 @@ public:
   IfThen(std::shared_ptr<Expression> condition,
          std::shared_ptr<Expression> expr)
       : condition_(condition), expr_(expr) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitIfThen(*condition_, *expr_);
   }
 
@@ -486,7 +492,7 @@ public:
              std::shared_ptr<Expression> then_expr,
              std::shared_ptr<Expression> else_expr)
       : condition_(condition), then_expr_(then_expr), else_expr_(else_expr) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitIfThenElse(*condition_, *then_expr_, *else_expr_);
   }
 
@@ -500,7 +506,7 @@ class While : public Expression {
 public:
   While(std::shared_ptr<Expression> condition, std::shared_ptr<Expression> body)
       : condition_(condition), body_(body) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitWhile(*condition_, *body_);
   }
 
@@ -514,7 +520,7 @@ public:
   For(std::string_view id, std::shared_ptr<Expression> first,
       std::shared_ptr<Expression> last, std::shared_ptr<Expression> body)
       : id_(id), first_(first), last_(last), body_(body) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitFor(id_, *first_, *last_, *body_);
   }
 
@@ -528,7 +534,7 @@ private:
 class Break : public Expression {
 public:
   Break() {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitBreak();
   }
 };
@@ -538,7 +544,7 @@ public:
   Let(std::vector<std::unique_ptr<Declaration>>&& declarations,
       std::vector<std::unique_ptr<Expression>>&& body)
       : declarations_(std::move(declarations)), body_(std::move(body)) {}
-  virtual bool Accept(ExpressionVisitor& visitor) const {
+  bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitLet(declarations_, body_);
   }
 
