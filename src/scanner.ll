@@ -15,7 +15,7 @@
 
 // The location of the current token.
 static yy::location loc;
- extern "C" int	fileno (FILE *);
+extern "C" int fileno(FILE *);
 %}
 %option noyywrap nounput batch debug noinput
 id    [a-zA-Z][a-zA-Z_0-9]*
@@ -47,35 +47,26 @@ blank [ \t]
 
 {int}      {
   errno = 0;
-  long n = strtol (yytext, NULL, 10);
-  if (! (INT_MIN <= n && n <= INT_MAX && errno != ERANGE))
-    driver.error (loc, "integer is out of range");
+  long n = strtol(yytext, NULL, 10);
+  if (!(INT_MIN <= n && n <= INT_MAX && errno != ERANGE)) {
+    driver.error(loc, "integer is out of range");
+  }
   return yy::Parser::make_NUMBER(n, loc);
 }
 
 {id}       return yy::Parser::make_IDENTIFIER(yytext, loc);
-.          driver.error (loc, "invalid character");
+.          driver.error(loc, "invalid character");
 <<EOF>>    return yy::Parser::make_END(loc);
 %%
 
-void
-Driver::scan_begin ()
-{
+void Driver::scan_begin() {
   yy_flex_debug = trace_scanning;
-  if (file.empty () || file == "-")
+  if (file.empty() || file == "-") {
     yyin = stdin;
-  else if (!(yyin = fopen (file.c_str (), "r")))
-    {
-      error ("cannot open " + file + ": " + strerror(errno));
-      exit (EXIT_FAILURE);
-    }
+  } else if (!(yyin = fopen(file.c_str(), "r"))) {
+    error("cannot open " + file + ": " + strerror(errno));
+    exit(EXIT_FAILURE);
+  }
 }
 
-
-
-void
-Driver::scan_end ()
-{
-  fclose (yyin);
-}
-
+void Driver::scan_end() { fclose(yyin); }
