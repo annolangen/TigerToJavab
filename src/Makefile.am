@@ -1,4 +1,4 @@
-tc_srcs = BinaryOp.cc ToString.cc types.cc scanner.ll parser.yy driver.cc
+tc_srcs = BinaryOp.cc ToString.cc types.cc parser.yy scanner.ll driver.cc
 
 bin_PROGRAMS = tc
 tc_SOURCES = tc.cc $(tc_srcs)
