@@ -1,6 +1,7 @@
 #ifndef DRIVER_HH
 #define DRIVER_HH
 #include "parser.hh"
+#include "Expression.h"
 #include <map>
 #include <string>
 // Tell Flex the lexer's prototype ...
@@ -15,7 +16,7 @@ public:
 
   std::map<std::string, int> variables;
 
-  int result;
+  std::shared_ptr<Expression> result;
   // Handling the scanner.
   void scan_begin();
   void scan_end();

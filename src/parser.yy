@@ -8,6 +8,7 @@
 %code requires
 {
 # include <string>
+#include "Expression.h"
 class Driver;
 }
 // The parsing context.
@@ -22,7 +23,7 @@ class Driver;
 %define parse.error verbose
 %code
 {
-# include "driver.h"
+#include "driver.h"
 }
 %define api.token.prefix {TOK_}
 %token
@@ -37,33 +38,20 @@ class Driver;
 ;
 %token <std::string> IDENTIFIER "identifier"
 %token <int> NUMBER "number"
-%type  <int> exp
-%printer { yyoutput << $$; } <*>;
+%type  <std::shared_ptr<Expression>> exp
+%type  <std::uniqe_ptr<LValue>> l_value
 %%
 %start unit;
-unit: assignments exp  { driver.result = $2; };
+unit: exp  { driver.result = std::move($1); };
 
-assignments:
-  %empty                 {}
-| assignments assignment {};
-
-assignment:
-  "identifier" ":=" exp { driver.variables[$1] = $3; };
+l_value: "identifier" { $$ = std::make_unique<IdLValue>($1); };
 
 %left "+" "-";
 %left "*" "/";
 exp:
-  exp "+" exp   { $$ = $1 + $3; }
-| exp "-" exp   { $$ = $1 - $3; }
-| exp "*" exp   { $$ = $1 * $3; }
-| exp "/" exp   { $$ = $1 / $3; }
-| "(" exp ")"   { std::swap ($$, $2); }
-| "identifier"  { $$ = driver.variables[$1]; }
-| "number"      { std::swap ($$, $1); };
+exp "+" exp      { $$ = std::make_shared<Binary>(std::move($1), BinaryOp::kPlus, std::move($3)); }
+| "number"         { $$ = std::make_shared<IntegerConstant>($1); };
 %%
-void
-yy::Parser::error (const location_type& l,
-                          const std::string& m)
-{
-  driver.error (l, m);
+void yy::Parser::error(const location_type& l, const std::string& m) {
+  driver.error(l, m);
 }
