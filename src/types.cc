@@ -66,7 +66,10 @@ public:
   }
   virtual bool VisitIntegerConstant(int value) { return SetType("int"); }
   virtual bool VisitNil() { return SetType("none"); }
-  virtual bool VisitLValue(const LValue& value) { return SetType("none"); }
+  virtual bool VisitLValue(const LValue& value) {
+    return SetType(
+        InferLValueType(value, inferred_type_by_name_, declared_type_by_name_));
+  }
   virtual bool VisitNegated(const Expression& value) { return SetType("int"); }
   virtual bool VisitBinary(const Expression& left, BinaryOp op,
                            const Expression& right) {
@@ -129,7 +132,7 @@ public:
 // Visitor that binds the type of a declared value to the declaration ID.
 class InferDeclarationVisitor : public DeclarationVisitor {
 public:
-  InferDeclarationVisitor(std::optional<std::string> result,
+  InferDeclarationVisitor(std::optional<std::string>& result,
                           InferExpressionVisitor& expression_visitor)
       : result_(result), expression_visitor_(expression_visitor) {}
   virtual bool
@@ -147,7 +150,7 @@ public:
   }
 
 private:
-  std::optional<std::string> result_;
+  std::optional<std::string>& result_;
   InferExpressionVisitor expression_visitor_;
 };
 

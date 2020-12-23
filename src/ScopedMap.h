@@ -1,5 +1,6 @@
 #pragma once
 #include <optional>
+#include <ostream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -31,6 +32,22 @@ public:
   // Adds or overwrites a new entry in the current scope
   T& operator[](std::string key) { return (*maps_.rbegin())[key]; }
 
+  template <class X>
+  friend std::ostream& operator<<(std::ostream& os, const ScopedMap<X>& map);
+
 private:
   std::vector<std::unordered_map<std::string, T>> maps_;
 };
+
+template <class T>
+std::ostream& operator<<(std::ostream& os, const ScopedMap<T>& map) {
+  os << "{";
+  const char* sep = "";
+  for (const auto& m : map.maps_) {
+    for (const auto& p : m) {
+      os << sep << p.first << ": " << p.second;
+      sep = ",\n";
+    }
+  }
+  return os << "}";
+}
