@@ -43,60 +43,105 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
   LPAREN  "("
   RPAREN  ")"
   COMMA   ","
+  COLON   ":"
   EQUAL   "="
+  ARRAY	  "array"
   BREAK	  "break"
   DO	  "do"
   ELSE	  "else"
   END	  "end"
   FOR	  "for"
+  FUNCTION	  "function"
   IF	  "if"
   LET	  "let"
   NIL	  "nil"
   OF	  "of"
   THEN	  "then"
+  TO	  "to"
+  TYPE	  "type"
+  VAR	  "var"
   WHILE	  "while"
 ;
 %token <std::string> IDENTIFIER "identifier"
 %token <std::string> STRING_CONSTANT "string"
 %token <int> NUMBER "number"
-%type  <Expression*> exp
+%type  <Expression*> expr
 %type  <LValue*> l_value
-%type  <std::vector<std::shared_ptr<Expression>>> exp_list exp_list_opt exp_seq exp_seq_opt
+%type  <std::vector<std::shared_ptr<Expression>>> expr_list expr_list_opt expr_seq expr_seq_opt
 %type  <std::vector<FieldValue>> field_list field_list_opt
 %%
 %start unit;
-unit: exp  { driver.result.reset($1); };
+unit: expr  { driver.result.reset($1); };
 
 l_value: "identifier" { $$ = new IdLValue($1); };
 
-exp_list:
-exp {$$.emplace_back($1);}
-| exp_list "," exp { $1.emplace_back($3); $$ = std::move($1); }
+expr_list:
+expr {$$.emplace_back($1);}
+| expr_list "," expr { $1.emplace_back($3); $$ = std::move($1); }
 ;
-exp_list_opt: %empty {} | exp_list {$$ = std::move($1);};
-exp_seq:
-exp {$$.emplace_back($1);}
-| exp_seq ";" exp { $1.emplace_back($3); $$ = std::move($1); }
+expr_list_opt: %empty {} | expr_list {$$ = std::move($1);};
+expr_seq:
+expr {$$.emplace_back($1);}
+| expr_seq ";" expr { $1.emplace_back($3); $$ = std::move($1); }
 ;
-exp_seq_opt: %empty {} | exp_seq {$$ = std::move($1);};
+expr_seq_opt: %empty {} | expr_seq {$$ = std::move($1);};
 field_list:
-"identifier" "=" exp {AppendFieldValue($1, $3, $$);}
-| field_list "," "identifier" "=" exp {AppendFieldValue($3, $5, $1);}
+"identifier" "=" expr {AppendFieldValue($1, $3, $$);}
+| field_list "," "identifier" "=" expr {AppendFieldValue($3, $5, $1);}
 ;
 field_list_opt: %empty {} | field_list {$$ = std::move($1);};
 %left ":=";
 %left "+" "-";
 %left "*" "/";
-exp:
+expr:
   "string"    { $$ = new StringConstant($1);}
 | "number"    { $$ = new IntegerConstant($1); }
 | "nil"       { $$ = new Nil(); }
-| "-" exp     { $$ = new Negated(std::shared_ptr<Expression>($2)); }
-| exp "+" exp { $$ = new Binary(std::shared_ptr<Expression>($1), BinaryOp::kPlus, std::shared_ptr<Expression>($3)); }
-| l_value ":=" exp { $$ = new Assignment(std::shared_ptr<LValue>($1), std::shared_ptr<Expression>($3)); }
-| "identifier" "(" exp_list_opt ")" {$$ = new FunctionCall($1, std::move($3));}
-| "(" exp_seq_opt ")" {$$ = new Block(std::move($2));}
+| "-" expr     { $$ = new Negated(std::shared_ptr<Expression>($2)); }
+| expr "+" expr { $$ = new Binary(std::shared_ptr<Expression>($1), BinaryOp::kPlus, std::shared_ptr<Expression>($3)); }
+| l_value ":=" expr { $$ = new Assignment(std::shared_ptr<LValue>($1), std::shared_ptr<Expression>($3)); }
+| "identifier" "(" expr_list_opt ")" {$$ = new FunctionCall($1, std::move($3));}
+| "(" expr_seq_opt ")" {$$ = new Block(std::move($2));}
 | "identifier" "{" field_list_opt "}" {$$ = new Record($1, std::move($3));}
+| "identifier" "[" expr "]" "of" expr {}
+| "if" expr "then" expr {}
+| "if" expr "then" expr "else" expr {}
+| "while" expr "do" expr {}
+| "for" "identifier" ":=" expr "to" expr "do" expr {}
+| "break" {}
+| "let" declaration_list "in" expr_seq_opt "end" {}
+;
+declaration_list:
+  declaration {}
+| declaration_list declaration {}
+;
+declaration:
+  type_declaration {}
+| variable_declaration {}
+| function_declaration {}
+;
+type_declaration:
+  "type" "identifier" "=" type {}
+;
+type:
+  "identifier" "{" type_fields_opt "}" {}
+| "array" "of" "identifier" {}
+;
+type_fields:
+  type_field {}
+| type_fields "," type_field {}
+;
+type_field:
+  "identifier" ":" "identifier" {}
+;
+type_fields_opt: %empty {} | type_fields {};
+variable_declaration:
+  "var" "identifier" ":=" expr {}
+| "var" "identifier" ":" "identifier" ":=" expr {}
+;
+function_declaration:
+  "function" "identifier" "(" type_fields_opt ")" "=" expr {}
+| "function" "identifier" "(" type_fields_opt ")" ":" "identifier" "=" expr {}
 ;
 %%
 void yy::Parser::error(const location_type& l, const std::string& m) {

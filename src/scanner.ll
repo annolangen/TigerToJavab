@@ -46,16 +46,22 @@ string \"[^\"]*\"
 ":="     return yy::Parser::make_ASSIGN(loc);
 "="      return yy::Parser::make_EQUAL(loc);
 ","      return yy::Parser::make_COMMA(loc);
+":"      return yy::Parser::make_COLON(loc);
+"array"	 return yy::Parser::make_ARRAY(loc);
 "break"	 return yy::Parser::make_BREAK(loc);
 "do"	 return yy::Parser::make_DO(loc);
 "else"	 return yy::Parser::make_ELSE(loc);
 "end"	 return yy::Parser::make_END(loc);
 "for"	 return yy::Parser::make_FOR(loc);
+"function"	 return yy::Parser::make_FUNCTION(loc);
 "if"	 return yy::Parser::make_IF(loc);
 "let"	 return yy::Parser::make_LET(loc);
 "nil"    return yy::Parser::make_NIL(loc);
 "of"	 return yy::Parser::make_OF(loc);
 "then"	 return yy::Parser::make_THEN(loc);
+"to"	 return yy::Parser::make_TO(loc);
+"type"	 return yy::Parser::make_TYPE(loc);
+"var"	 return yy::Parser::make_VAR(loc);
 "while"	 return yy::Parser::make_WHILE(loc);
 
 {int}      {
