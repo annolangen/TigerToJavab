@@ -103,8 +103,8 @@ expr:
 | "identifier" "(" expr_list_opt ")" {$$ = new FunctionCall($1, std::move($3));}
 | "(" expr_seq_opt ")" {$$ = new Block(std::move($2));}
 | "identifier" "{" field_list_opt "}" {$$ = new Record($1, std::move($3));}
-| "identifier" "[" expr "]" "of" expr {}
-| "if" expr "then" expr {}
+| "identifier" "[" expr "]" "of" expr {$$ = new Array($1, $3, $6);}
+| "if" expr "then" expr {$$ = new IfThen($2, $4);}
 | "if" expr "then" expr "else" expr {}
 | "while" expr "do" expr {}
 | "for" "identifier" ":=" expr "to" expr "do" expr {}
