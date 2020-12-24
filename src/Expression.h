@@ -417,6 +417,7 @@ private:
 };
 
 class FunctionCall : public Expression {
+public:
   FunctionCall(std::string_view id,
                std::vector<std::shared_ptr<Expression>>&& args)
       : id_(id), args_(std::move(args)) {}

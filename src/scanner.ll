@@ -21,6 +21,7 @@ extern "C" int fileno(FILE *);
 id    [a-zA-Z][a-zA-Z_0-9]*
 int   [0-9]+
 blank [ \t]
+string \"[^\"]*\"
 
 %{
   // Code run each time a pattern is matched.
@@ -43,7 +44,19 @@ blank [ \t]
 "("      return yy::Parser::make_LPAREN(loc);
 ")"      return yy::Parser::make_RPAREN(loc);
 ":="     return yy::Parser::make_ASSIGN(loc);
-
+"="      return yy::Parser::make_EQUAL(loc);
+","      return yy::Parser::make_COMMA(loc);
+"break"	 return yy::Parser::make_BREAK(loc);
+"do"	 return yy::Parser::make_DO(loc);
+"else"	 return yy::Parser::make_ELSE(loc);
+"end"	 return yy::Parser::make_END(loc);
+"for"	 return yy::Parser::make_FOR(loc);
+"if"	 return yy::Parser::make_IF(loc);
+"let"	 return yy::Parser::make_LET(loc);
+"nil"    return yy::Parser::make_NIL(loc);
+"of"	 return yy::Parser::make_OF(loc);
+"then"	 return yy::Parser::make_THEN(loc);
+"while"	 return yy::Parser::make_WHILE(loc);
 
 {int}      {
   errno = 0;
@@ -53,7 +66,7 @@ blank [ \t]
   }
   return yy::Parser::make_NUMBER(n, loc);
 }
-
+{string}   return yy::Parser::make_STRING_CONSTANT(yytext, loc);
 {id}       return yy::Parser::make_IDENTIFIER(yytext, loc);
 .          driver.error(loc, "invalid character");
 <<EOF>>    return yy::Parser::make_END(loc);
