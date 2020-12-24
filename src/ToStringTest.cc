@@ -1,5 +1,6 @@
 #include "ToString.h"
 #include "testing/catch.h"
+#include "syntax_nodes.h"
 namespace {
 SCENARIO("ToString produces strings for all our classes", "[ToString]") {
   GIVEN("A RecordType") {

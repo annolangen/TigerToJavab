@@ -8,7 +8,7 @@
 %code requires
 {
 # include <string>
-#include "Expression.h"
+#include "syntax_nodes.h"
 class Driver;
 }
 // The parsing context.

@@ -1,6 +1,7 @@
 #include "types.h"
 #include "testing/catch.h"
 #include "testing/testing.h"
+#include "syntax_nodes.h"
 namespace {
 using types::InferType;
 
@@ -8,9 +9,9 @@ using types::InferType;
 
 SCENARIO("types functions", "[types]") {
   GIVEN("Leaf expressions") {
-    auto anInt = [](){return new IntegerConstant(3);};
+    auto anInt = []() { return new IntegerConstant(3); };
     HasType("3", "int");
-    auto aString = [](){return new StringConstant("Hello");};
+    auto aString = []() { return new StringConstant("Hello"); };
     REQUIRE(InferType(*aString()) == "string");
     auto aNil = std::make_shared<Nil>();
     REQUIRE(InferType(*aNil) == "none");
@@ -28,7 +29,8 @@ SCENARIO("types functions", "[types]") {
     WHEN("composed") {
       REQUIRE(InferType(Negated(anInt())) == "int");
       REQUIRE(InferType(Binary(anInt(), BinaryOp::kTimes, anInt())) == "int");
-      REQUIRE(InferType(Binary(aString(), BinaryOp::kPlus, aString())) == "string");
+      REQUIRE(InferType(Binary(aString(), BinaryOp::kPlus, aString())) ==
+              "string");
       REQUIRE(InferType(IfThen(anInt(), aString())) == "none");
       REQUIRE(InferType(IfThenElse(anInt(), aString(), aString())) == "string");
       //      REQUIRE(InferType(Block({anInt(), aString()})) == "string");
@@ -39,7 +41,8 @@ SCENARIO("types functions", "[types]") {
     }
     GIVEN("Declarations") {
       std::vector<std::unique_ptr<Declaration>> declarations;
-      declarations.push_back(std::make_unique<VariableDeclaration>("n", anInt()));
+      declarations.push_back(
+          std::make_unique<VariableDeclaration>("n", anInt()));
       declarations.push_back(
           std::make_unique<VariableDeclaration>("s", aString()));
       declarations.push_back(std::make_unique<FunctionDeclaration>(
