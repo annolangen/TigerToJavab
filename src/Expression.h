@@ -14,6 +14,12 @@
 // navigation by calling Accept recursively. Methods Accept and Visit
 // return boolean `false` to terminate navigation.
 
+// Memory management notes. The nodes of the abstract syntax tree own
+// their children, in the sense that the parent destructor is
+// responsibile for destroying the child. This is delegated to
+// unique_ptr or shared_ptr. The constructors take raw pointers and
+// adopt them.
+
 struct TypeField {
   std::string id;
   std::string type_id;
@@ -155,10 +161,10 @@ private:
 
 class VariableDeclaration : public Declaration {
 public:
-  VariableDeclaration(std::string_view id, std::shared_ptr<Expression> expr)
+  VariableDeclaration(std::string_view id, Expression* expr)
       : Declaration(id), expr_(expr) {}
   VariableDeclaration(std::string_view id, std::string_view type_id,
-                      std::shared_ptr<Expression> expr)
+                      Expression* expr)
       : Declaration(id), type_id_(type_id), expr_(expr) {}
   bool Accept(DeclarationVisitor& visitor) const override {
     return visitor.VisitVariableDeclaration(Id(), type_id_, *expr_);
@@ -166,17 +172,17 @@ public:
 
 private:
   std::optional<std::string> type_id_;
-  std::shared_ptr<Expression> expr_;
+  std::unique_ptr<Expression> expr_;
 };
 
 class FunctionDeclaration : public Declaration {
 public:
   FunctionDeclaration(std::string_view id, std::vector<TypeField>&& params,
-                      std::shared_ptr<Expression> body)
+                      Expression* body)
       : Declaration(id), params_(std::move(params)), body_(body) {}
   FunctionDeclaration(std::string_view id, std::vector<TypeField>&& params,
                       std::string_view type_id,
-                      std::shared_ptr<Expression> body)
+                      Expression* body)
       : Declaration(id), type_id_(type_id), params_(std::move(params)),
         body_(body) {}
   bool Accept(DeclarationVisitor& visitor) const override {
@@ -186,7 +192,7 @@ public:
 private:
   std::vector<TypeField> params_;
   std::optional<std::string> type_id_;
-  std::shared_ptr<Expression> body_;
+  std::unique_ptr<Expression> body_;
 };
 
 // Forward declaration of visitor to navigate abstract syntax tree Expression.
@@ -360,7 +366,7 @@ private:
 
 class IndexLValue : public LValue {
 public:
-  IndexLValue(std::shared_ptr<LValue> value, std::shared_ptr<Expression> expr)
+  IndexLValue(std::shared_ptr<LValue> value, Expression* expr)
       : value_(value), expr_(expr) {}
   bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitIndex(*value_, *expr_);
@@ -374,38 +380,38 @@ public:
 
 private:
   std::shared_ptr<LValue> value_;
-  std::shared_ptr<Expression> expr_;
+  std::unique_ptr<Expression> expr_;
 };
 
 class Negated : public Expression {
 public:
-  Negated(std::shared_ptr<Expression> expr) : expr_(expr) {}
+  Negated(Expression* expr) : expr_(expr) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitNegated(*expr_);
   }
 
 private:
-  std::shared_ptr<Expression> expr_;
+  std::unique_ptr<Expression> expr_;
 };
 
 class Binary : public Expression {
 public:
-  Binary(std::shared_ptr<Expression> left, BinaryOp op,
-         std::shared_ptr<Expression> right)
+  Binary(Expression* left, BinaryOp op,
+         Expression* right)
       : left_(left), op_(op), right_(right) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitBinary(*left_, op_, *right_);
   }
 
 private:
-  std::shared_ptr<Expression> left_;
+  std::unique_ptr<Expression> left_;
   BinaryOp op_;
-  std::shared_ptr<Expression> right_;
+  std::unique_ptr<Expression> right_;
 };
 
 class Assignment : public Expression {
 public:
-  Assignment(std::shared_ptr<LValue> value, std::shared_ptr<Expression> expr)
+  Assignment(std::shared_ptr<LValue> value, Expression* expr)
       : value_(value), expr_(expr) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitAssignment(*value_, *expr_);
@@ -413,7 +419,7 @@ public:
 
 private:
   std::shared_ptr<LValue> value_;
-  std::shared_ptr<Expression> expr_;
+  std::unique_ptr<Expression> expr_;
 };
 
 class FunctionCall : public Expression {
@@ -460,8 +466,8 @@ private:
 // Array literal
 class Array : public Expression {
 public:
-  Array(std::string_view type_id, std::shared_ptr<Expression> size,
-        std::shared_ptr<Expression> value)
+  Array(std::string_view type_id, Expression* size,
+        Expression* value)
       : type_id_(type_id), size_(size), value_(value) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitArray(type_id_, *size_, *value_);
@@ -469,57 +475,57 @@ public:
 
 private:
   std::string type_id_;
-  std::shared_ptr<Expression> size_;
-  std::shared_ptr<Expression> value_;
+  std::unique_ptr<Expression> size_;
+  std::unique_ptr<Expression> value_;
 };
 
 class IfThen : public Expression {
 public:
-  IfThen(std::shared_ptr<Expression> condition,
-         std::shared_ptr<Expression> expr)
+  IfThen(Expression* condition,
+         Expression* expr)
       : condition_(condition), expr_(expr) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitIfThen(*condition_, *expr_);
   }
 
 private:
-  std::shared_ptr<Expression> condition_;
-  std::shared_ptr<Expression> expr_;
+  std::unique_ptr<Expression> condition_;
+  std::unique_ptr<Expression> expr_;
 };
 
 class IfThenElse : public Expression {
 public:
-  IfThenElse(std::shared_ptr<Expression> condition,
-             std::shared_ptr<Expression> then_expr,
-             std::shared_ptr<Expression> else_expr)
+  IfThenElse(Expression* condition,
+             Expression* then_expr,
+             Expression* else_expr)
       : condition_(condition), then_expr_(then_expr), else_expr_(else_expr) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitIfThenElse(*condition_, *then_expr_, *else_expr_);
   }
 
 private:
-  std::shared_ptr<Expression> condition_;
-  std::shared_ptr<Expression> then_expr_;
-  std::shared_ptr<Expression> else_expr_;
+  std::unique_ptr<Expression> condition_;
+  std::unique_ptr<Expression> then_expr_;
+  std::unique_ptr<Expression> else_expr_;
 };
 
 class While : public Expression {
 public:
-  While(std::shared_ptr<Expression> condition, std::shared_ptr<Expression> body)
+  While(Expression* condition, Expression* body)
       : condition_(condition), body_(body) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitWhile(*condition_, *body_);
   }
 
 private:
-  std::shared_ptr<Expression> condition_;
-  std::shared_ptr<Expression> body_;
+  std::unique_ptr<Expression> condition_;
+  std::unique_ptr<Expression> body_;
 };
 
 class For : public Expression {
 public:
-  For(std::string_view id, std::shared_ptr<Expression> first,
-      std::shared_ptr<Expression> last, std::shared_ptr<Expression> body)
+  For(std::string_view id, Expression* first,
+      Expression* last, Expression* body)
       : id_(id), first_(first), last_(last), body_(body) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitFor(id_, *first_, *last_, *body_);
@@ -527,9 +533,9 @@ public:
 
 private:
   std::string id_;
-  std::shared_ptr<Expression> first_;
-  std::shared_ptr<Expression> last_;
-  std::shared_ptr<Expression> body_;
+  std::unique_ptr<Expression> first_;
+  std::unique_ptr<Expression> last_;
+  std::unique_ptr<Expression> body_;
 };
 
 class Break : public Expression {

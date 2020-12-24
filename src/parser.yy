@@ -97,9 +97,9 @@ expr:
   "string"    { $$ = new StringConstant($1);}
 | "number"    { $$ = new IntegerConstant($1); }
 | "nil"       { $$ = new Nil(); }
-| "-" expr     { $$ = new Negated(std::shared_ptr<Expression>($2)); }
-| expr "+" expr { $$ = new Binary(std::shared_ptr<Expression>($1), BinaryOp::kPlus, std::shared_ptr<Expression>($3)); }
-| l_value ":=" expr { $$ = new Assignment(std::shared_ptr<LValue>($1), std::shared_ptr<Expression>($3)); }
+| "-" expr     { $$ = new Negated($2); }
+| expr "+" expr { $$ = new Binary($1, BinaryOp::kPlus, $3); }
+| l_value ":=" expr { $$ = new Assignment(std::shared_ptr<LValue>($1), $3); }
 | "identifier" "(" expr_list_opt ")" {$$ = new FunctionCall($1, std::move($3));}
 | "(" expr_seq_opt ")" {$$ = new Block(std::move($2));}
 | "identifier" "{" field_list_opt "}" {$$ = new Record($1, std::move($3));}
