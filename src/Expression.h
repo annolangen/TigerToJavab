@@ -202,7 +202,7 @@ public:
 
 struct FieldValue {
   std::string id;
-  std::unique_ptr<Expression> expr;
+  std::shared_ptr<Expression> expr;
 };
 
 class LValue;

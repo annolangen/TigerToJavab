@@ -4,10 +4,7 @@
 namespace {
 using types::InferType;
 
-void HasType(const std::string& text, const std::string& type) {
-  auto e = testing::Parse(text);
-  REQUIRE(InferType(*e) == type);
-}
+#define HasType(text, type) REQUIRE(InferType(*testing::Parse(text)) == type)
 
 SCENARIO("types functions", "[types]") {
   GIVEN("Leaf expressions") {
@@ -56,9 +53,7 @@ SCENARIO("types functions", "[types]") {
         REQUIRE(InferType(let) == "int");
       }
     }
-    GIVEN("Parsed test") {
-      HasType("1+1", "int");
-    }
+    GIVEN("Parsed test") { HasType("1+1", "int"); }
     // Composite expressions
     // lvalue
     // lvalue := expr

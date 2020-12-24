@@ -2,7 +2,7 @@
 #include "Expression.h"
 #include <sstream>
 
-template <class T> std::string ToString(T item) {
+template <class T> std::string ToString(const T& item) {
   std::ostringstream out;
   out << item;
   return out.str();

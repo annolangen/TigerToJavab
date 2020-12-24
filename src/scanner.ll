@@ -69,7 +69,7 @@ string \"[^\"]*\"
 {string}   return yy::Parser::make_STRING_CONSTANT(yytext, loc);
 {id}       return yy::Parser::make_IDENTIFIER(yytext, loc);
 .          driver.error(loc, "invalid character");
-<<EOF>>    return yy::Parser::make_END(loc);
+<<EOF>>    return yy::Parser::make_EOF(loc);
 %%
 
 void Driver::scan_begin() {

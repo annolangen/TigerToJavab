@@ -1,7 +1,7 @@
 %skeleton "lalr1.cc" /* -*- C++ -*- */
 %require "3.0.4"
 %defines
-%define api.parser.class {Parser}
+%define parser_class_name {Parser}
 %define api.token.constructor
 %define api.value.type variant
 %define parse.assert
@@ -34,7 +34,7 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
 }
 %define api.token.prefix {TOK_}
 %token
-  END  0  "end of file"
+  EOF  0  "end of file"
   ASSIGN  ":="
   MINUS   "-"
   PLUS    "+"
