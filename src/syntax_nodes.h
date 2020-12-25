@@ -1,5 +1,10 @@
 #pragma once
 #include "Expression.h"
+// Memory management notes. The nodes of the abstract syntax tree own
+// their children, in the sense that the parent destructor is
+// responsibile for destroying the child. This is delegated to
+// unique_ptr or shared_ptr. The constructors take raw pointers and
+// adopt them.
 
 // Reference to a named type.
 class TypeReference : public Type {

@@ -9,25 +9,27 @@
 #include <string_view>
 #include <vector>
 
-// Pairs of classes to hold the abstract syntax tree and navigating
-// them. Pure virtual classes Type, Declaration, and Expression each
-// accept corresponding visitors, TypeVisitor, DeclarationVisitor, and
-// ExpressionVisitor. Default methods in visitor classes facilitate
-// navigation by calling Accept recursively. Methods Accept and Visit
-// return boolean `false` to terminate navigation.
+// Pairs of classes implement the abstract syntax tree from
+// http://www.cs.columbia.edu/~sedwards/classes/2002/w4115/tiger.pdf:
+// nodes and visitors. Read more about this pattern at
+// https://en.wikipedia.org/wiki/Visitor_pattern.  Classes for every
+// node derive from pure virtual base classes Type, Declaration, or
+// Expression. The node classes manage memory and implement the Accept
+// method to support visitors. Visitor base classes TypeVisitor,
+// DeclarationVisitor, and ExpressionVisitor, implement their member
+// methods so that full traversal of child nodes is the default. As a
+// special twist, value `false` stops traversal early when returned
+// from Accept or a visit method.
 
-// Memory management notes. The nodes of the abstract syntax tree own
-// their children, in the sense that the parent destructor is
-// responsibile for destroying the child. This is delegated to
-// unique_ptr or shared_ptr. The constructors take raw pointers and
-// adopt them.
-
+// Abstract base class for Type nodes.
 class Type {
 public:
   virtual ~Type() = default;
   virtual bool Accept(TypeVisitor& visitor) const = 0;
+  
   // Returns element type ID for an array type.
   virtual std::optional<std::string_view> GetElementType() const { return {}; }
+  
   // Returns type ID for an field for a record type.
   virtual std::optional<std::string_view>
   GetFieldType(const std::string& field_id) const {
@@ -35,7 +37,7 @@ public:
   }
 };
 
-// Abstract base class for Declarations
+// Abstract base class for Declaration nodes.
 class Declaration {
 public:
   Declaration(std::string_view id) : id_(id) {}
@@ -52,8 +54,7 @@ private:
 // Forward declaration of visitor to navigate abstract syntax tree Expression.
 class ExpressionVisitor;
 
-// Base class for Abstract Syntax Tree. Original source is
-// http://www.cs.columbia.edu/~sedwards/classes/2002/w4115/tiger.pdf
+// Base class for Expression nodes.
 class Expression {
 public:
   virtual ~Expression() = default;
