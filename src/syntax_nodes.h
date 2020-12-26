@@ -351,14 +351,14 @@ public:
 
 class Let : public Expression {
 public:
-  Let(std::vector<std::unique_ptr<Declaration>>&& declarations,
-      std::vector<std::unique_ptr<Expression>>&& body)
+  Let(std::vector<std::shared_ptr<Declaration>>&& declarations,
+      std::vector<std::shared_ptr<Expression>>&& body)
       : declarations_(std::move(declarations)), body_(std::move(body)) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitLet(declarations_, body_);
   }
 
 private:
-  std::vector<std::unique_ptr<Declaration>> declarations_;
-  std::vector<std::unique_ptr<Expression>> body_;
+  std::vector<std::shared_ptr<Declaration>> declarations_;
+  std::vector<std::shared_ptr<Expression>> body_;
 };

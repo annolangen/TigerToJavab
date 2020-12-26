@@ -15,12 +15,12 @@ public:
                      std::string& type)
       : inferred_type_by_name_(inferred_type_by_name),
         declared_type_by_name_(declared_type_by_name), type_(type) {}
-  virtual bool VisitId(const std::string& id) {
+  bool VisitId(const std::string& id) override {
     auto found = inferred_type_by_name_.Lookup(id);
     type_ = found ? *found : "none";
     return true;
   }
-  virtual bool VisitField(const LValue& value, const std::string& id) {
+  bool VisitField(const LValue& value, const std::string& id) override {
     if (!value.Accept(*this)) return false;
     // Now type_ holds the ID for the record type
     if (auto value_type = declared_type_by_name_.Lookup(type_); value_type) {
@@ -30,7 +30,7 @@ public:
     }
     return true;
   }
-  virtual bool VisitIndex(const LValue& value, const Expression& expr) {
+  bool VisitIndex(const LValue& value, const Expression& expr) override {
     if (!value.Accept(*this)) return false;
     // Now type_ holds the ID for the array type
     if (auto array_type = declared_type_by_name_.Lookup(type_); array_type) {
@@ -61,61 +61,60 @@ InferLValueType(const LValue& value,
 class InferExpressionVisitor : public ExpressionVisitor {
 public:
   InferExpressionVisitor(std::string& type) : type_(type) {}
-  virtual bool VisitStringConstant(const std::string& text) {
+  bool VisitStringConstant(const std::string& text) override {
     return SetType("string");
   }
-  virtual bool VisitIntegerConstant(int value) { return SetType("int"); }
-  virtual bool VisitNil() { return SetType("none"); }
-  virtual bool VisitLValue(const LValue& value) {
+  bool VisitIntegerConstant(int value) override { return SetType("int"); }
+  bool VisitNil() override { return SetType("none"); }
+  bool VisitLValue(const LValue& value) override {
     return SetType(
         InferLValueType(value, inferred_type_by_name_, declared_type_by_name_));
   }
-  virtual bool VisitNegated(const Expression& value) { return SetType("int"); }
-  virtual bool VisitBinary(const Expression& left, BinaryOp op,
-                           const Expression& right) {
+  bool VisitNegated(const Expression& value) override { return SetType("int"); }
+  bool VisitBinary(const Expression& left, BinaryOp op,
+                   const Expression& right) override {
     return right.Accept(*this);
   }
-  virtual bool VisitAssignment(const LValue& value, const Expression& expr) {
+  bool VisitAssignment(const LValue& value, const Expression& expr) override {
     return SetType("none");
   }
-  virtual bool
-  VisitFunctionCall(const std::string& id,
-                    const std::vector<std::shared_ptr<Expression>>& args) {
+  bool VisitFunctionCall(
+      const std::string& id,
+      const std::vector<std::shared_ptr<Expression>>& args) override {
     auto found = inferred_type_by_name_.Lookup(id);
     return SetType(found ? *found : "none");
   }
-  virtual bool
-  VisitBlock(const std::vector<std::shared_ptr<Expression>>& exprs) {
+  bool
+  VisitBlock(const std::vector<std::shared_ptr<Expression>>& exprs) override {
     return (*exprs.rbegin())->Accept(*this);
   }
-  virtual bool VisitRecord(const std::string& type_id,
-                           const std::vector<FieldValue>& field_values) {
+  bool VisitRecord(const std::string& type_id,
+                   const std::vector<FieldValue>& field_values) override {
     return SetType(type_id);
   }
-  virtual bool VisitArray(const std::string& type_id, const Expression& size,
-                          const Expression& value) {
+  bool VisitArray(const std::string& type_id, const Expression& size,
+                  const Expression& value) override {
     return SetType(type_id);
   }
-  virtual bool VisitIfThen(const Expression& condition,
-                           const Expression& expr) {
+  bool VisitIfThen(const Expression& condition,
+                   const Expression& expr) override {
     return SetType("none");
   }
-  virtual bool VisitIfThenElse(const Expression& condition,
-                               const Expression& then_expr,
-                               const Expression& else_expr) {
+  bool VisitIfThenElse(const Expression& condition, const Expression& then_expr,
+                       const Expression& else_expr) override {
     return else_expr.Accept(*this);
   }
-  virtual bool VisitWhile(const Expression& condition, const Expression& body) {
+  bool VisitWhile(const Expression& condition,
+                  const Expression& body) override {
     return SetType("none");
   }
-  virtual bool VisitFor(const std::string& id, const Expression& first,
-                        const Expression& last, const Expression& body) {
+  bool VisitFor(const std::string& id, const Expression& first,
+                const Expression& last, const Expression& body) override {
     return SetType("none");
   }
-  virtual bool VisitBreak() { return SetType("none"); }
-  virtual bool
-  VisitLet(const std::vector<std::unique_ptr<Declaration>>& declarations,
-           const std::vector<std::unique_ptr<Expression>>& body);
+  bool VisitBreak() override { return SetType("none"); }
+  bool VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
+                const std::vector<std::shared_ptr<Expression>>& body);
   bool SetType(const std::string& type) {
     type_ = type;
     return true;
@@ -135,16 +134,16 @@ public:
   InferDeclarationVisitor(std::optional<std::string>& result,
                           InferExpressionVisitor& expression_visitor)
       : result_(result), expression_visitor_(expression_visitor) {}
-  virtual bool
-  VisitVariableDeclaration(const std::string& id,
-                           const std::optional<std::string>& type_id,
-                           const Expression& expr) {
+  bool VisitVariableDeclaration(const std::string& id,
+                                const std::optional<std::string>& type_id,
+                                const Expression& expr) override {
     result_ = type_id ? *type_id : expression_visitor_.InferType(expr);
     return true;
   }
-  virtual bool VisitFunctionDeclaration(
-      const std::string& id, const std::vector<TypeField>& params,
-      const std::optional<std::string> type_id, const Expression& body) {
+  bool VisitFunctionDeclaration(const std::string& id,
+                                const std::vector<TypeField>& params,
+                                const std::optional<std::string> type_id,
+                                const Expression& body) override {
     result_ = type_id ? *type_id : expression_visitor_.InferType(body);
     return true;
   }
@@ -155,8 +154,8 @@ private:
 };
 
 bool InferExpressionVisitor::VisitLet(
-    const std::vector<std::unique_ptr<Declaration>>& declarations,
-    const std::vector<std::unique_ptr<Expression>>& body) {
+    const std::vector<std::shared_ptr<Declaration>>& declarations,
+    const std::vector<std::shared_ptr<Expression>>& body) {
   if (body.empty()) {
     return SetType("none");
   }
@@ -183,7 +182,7 @@ std::string InferType(const Expression& e) {
 }
 
 ScopedMap<const Type*>&
-EnterScope(const std::vector<std::unique_ptr<Declaration>>& declarations,
+EnterScope(const std::vector<std::shared_ptr<Declaration>>& declarations,
            ScopedMap<const Type*>& type_namespace) {
   return EnterScope<const Type*>(declarations, &Declaration::GetType,
                                  type_namespace);

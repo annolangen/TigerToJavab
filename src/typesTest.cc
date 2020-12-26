@@ -40,7 +40,7 @@ SCENARIO("types functions", "[types]") {
       REQUIRE(InferType(Let({}, {})) == "none");
     }
     GIVEN("Declarations") {
-      std::vector<std::unique_ptr<Declaration>> declarations;
+      std::vector<std::shared_ptr<Declaration>> declarations;
       declarations.push_back(
           std::make_unique<VariableDeclaration>("n", anInt()));
       declarations.push_back(
@@ -50,7 +50,7 @@ SCENARIO("types functions", "[types]") {
       declarations.push_back(std::make_unique<FunctionDeclaration>(
           "f", std::vector<TypeField>(), "T", anInt()));
       WHEN("n") {
-        std::vector<std::unique_ptr<Expression>> body;
+        std::vector<std::shared_ptr<Expression>> body;
         body.push_back(std::make_unique<IdLValue>("n"));
         Let let(std::move(declarations), std::move(body));
         REQUIRE(InferType(let) == "int");

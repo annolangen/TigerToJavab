@@ -69,6 +69,7 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
 %type  <LValue*> l_value
 %type  <std::vector<std::shared_ptr<Expression>>> expr_list expr_list_opt expr_seq expr_seq_opt
 %type  <std::vector<FieldValue>> field_list field_list_opt
+%type  <std::vector<std::shared_ptr<Declaration>>> declaration_list
 %%
 %start unit;
 unit: expr  { driver.result.reset($1); };
@@ -105,11 +106,11 @@ expr:
 | "identifier" "{" field_list_opt "}" {$$ = new Record($1, std::move($3));}
 | "identifier" "[" expr "]" "of" expr {$$ = new Array($1, $3, $6);}
 | "if" expr "then" expr {$$ = new IfThen($2, $4);}
-| "if" expr "then" expr "else" expr {}
-| "while" expr "do" expr {}
-| "for" "identifier" ":=" expr "to" expr "do" expr {}
-| "break" {}
-| "let" declaration_list "in" expr_seq_opt "end" {}
+| "if" expr "then" expr "else" expr {$$ = new IfThenElse($2, $4, $6);}
+| "while" expr "do" expr {$$ = new While($2, $4);}
+| "for" "identifier" ":=" expr "to" expr "do" expr {$$ = new For($2, $4, $6, $8);}
+| "break" {$$ = new Break();}
+| "let" declaration_list "in" expr_seq_opt "end" {$$ = new Let(std::move($2), std::move($4));}
 ;
 declaration_list:
   declaration {}

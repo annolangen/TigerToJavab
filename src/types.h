@@ -22,7 +22,7 @@ template <class T> struct ScopeExiter {
 // chaining.
 template <class T>
 ScopedMap<T>&
-EnterScope(const std::vector<std::unique_ptr<Declaration>>& declarations,
+EnterScope(const std::vector<std::shared_ptr<Declaration>>& declarations,
            std::function<std::optional<T>(const Declaration&)> fn,
            ScopedMap<T>& map) {
   map.EnterScope();
@@ -35,6 +35,6 @@ EnterScope(const std::vector<std::unique_ptr<Declaration>>& declarations,
 // Inserts all type declarations from the given vector into a new scope of the
 // given type namespace. Returns the given type namespace.
 ScopedMap<const Type*>&
-EnterScope(const std::vector<std::unique_ptr<Declaration>>& declarations,
+EnterScope(const std::vector<std::shared_ptr<Declaration>>& declarations,
            ScopedMap<const Type*>& type_namespace);
 } // namespace types
