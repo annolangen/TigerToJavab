@@ -114,7 +114,7 @@ public:
   }
   bool VisitBreak() override { return SetType("none"); }
   bool VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
-                const std::vector<std::shared_ptr<Expression>>& body);
+                const std::vector<std::shared_ptr<Expression>>& body) override;
   bool SetType(const std::string& type) {
     type_ = type;
     return true;
