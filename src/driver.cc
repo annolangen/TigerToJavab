@@ -6,7 +6,7 @@ Driver::Driver() : trace_scanning(false), trace_parsing(false) {
   variables["two"] = 2;
 }
 
-Driver::~Driver() {}
+Driver::~Driver() = default;
 
 int Driver::parse(const std::string& f) {
   file = f;

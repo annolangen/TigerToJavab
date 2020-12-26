@@ -11,27 +11,27 @@ using util::join;
 class AppendTypeVisitor : public TypeVisitor {
 public:
   AppendTypeVisitor(std::ostream& os) : os_(os) {}
-  virtual bool VisitTypeReference(const std::string& id) {
+  bool VisitTypeReference(const std::string& id) override {
     os_ << id;
     return true;
   }
 
-  virtual bool VisitRecordType(const std::vector<TypeField>& fields) {
+  bool VisitRecordType(const std::vector<TypeField>& fields) override {
     os_ << "{" << (fields | join(", ")) << "}";
     return true;
   }
 
-  virtual bool VisitArrayType(const std::string& type_id) {
+  bool VisitArrayType(const std::string& type_id) override {
     os_ << "array of " << type_id;
     return true;
   }
 
-  virtual bool VisitInt() {
+  bool VisitInt() override {
     os_ << "int";
     return true;
   }
 
-  virtual bool VisitString() {
+  bool VisitString() override {
     os_ << "string";
     return true;
   }
