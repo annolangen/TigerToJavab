@@ -5,7 +5,7 @@
 namespace {
 using types::InferType;
 
-#define HasType(text, type) REQUIRE(InferType(*testing::Parse(text)) == type)
+#define HasType(text, type) REQUIRE(InferType(*testing::Parse(text)) == (type))
 
 SCENARIO("types functions", "[types]") {
   GIVEN("Leaf expressions") {

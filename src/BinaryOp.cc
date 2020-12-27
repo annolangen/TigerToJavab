@@ -6,7 +6,7 @@ std::ostream& operator<<(std::ostream& os, BinaryOp op) {
     return os << "<NONE>";
 #define DEF_BINARY_OPERATOR(c, n)                                              \
   case c:                                                                      \
-    return os << n;
+    return os << (n);
 #include "binary_operator.defs"
 #undef DEF_BINARY_OPERATOR
   }
