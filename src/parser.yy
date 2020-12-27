@@ -70,6 +70,10 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
 %type  <std::vector<std::shared_ptr<Expression>>> expr_list expr_list_opt expr_seq expr_seq_opt
 %type  <std::vector<FieldValue>> field_list field_list_opt
 %type  <std::vector<std::shared_ptr<Declaration>>> declaration_list
+%type  <Declaration*> declaration type_declaration variable_declaration function_declaration
+%type  <Type*> type
+%type  <std::vector<TypeField>> type_fields_opt type_fields
+%type  <TypeField> type_field
 %%
 %start unit;
 unit: expr  { driver.result.reset($1); };
@@ -113,36 +117,37 @@ expr:
 | "let" declaration_list "in" expr_seq_opt "end" {$$ = new Let(std::move($2), std::move($4));}
 ;
 declaration_list:
-  declaration {}
-| declaration_list declaration {}
+declaration {$$.emplace_back($1);}
+| declaration_list declaration {$1.emplace_back($2); $$ = std::move($1);}
 ;
 declaration:
-  type_declaration {}
-| variable_declaration {}
-| function_declaration {}
+  type_declaration {$$ = $1;}
+| variable_declaration {$$ = $1;}
+| function_declaration {$$ = $1;}
 ;
 type_declaration:
-  "type" "identifier" "=" type {}
+  "type" "identifier" "=" type {$$ = new TypeDeclaration($2, $4);}
 ;
 type:
-  "identifier" "{" type_fields_opt "}" {}
-| "array" "of" "identifier" {}
+  "identifier" {$$ = new TypeReference($1);}
+| "{" type_fields_opt "}" {$$ = new RecordType(std::move($2));}
+| "array" "of" "identifier" {$$ = new ArrayType($3);}
 ;
 type_fields:
-  type_field {}
-| type_fields "," type_field {}
+  type_field {$$.push_back(std::move($1));}
+| type_fields "," type_field {$1.push_back(std::move($3)); $$ = std::move($1);}
 ;
 type_field:
-  "identifier" ":" "identifier" {}
+  "identifier" ":" "identifier" {$$ = {$1, $3};}
 ;
-type_fields_opt: %empty {} | type_fields {};
+type_fields_opt: %empty {} | type_fields {$$ = std::move($1);};
 variable_declaration:
-  "var" "identifier" ":=" expr {}
-| "var" "identifier" ":" "identifier" ":=" expr {}
+  "var" "identifier" ":=" expr {$$ = new VariableDeclaration($2, $4);}
+| "var" "identifier" ":" "identifier" ":=" expr {$$ = new VariableDeclaration($2, $4, $6);}
 ;
 function_declaration:
-  "function" "identifier" "(" type_fields_opt ")" "=" expr {}
-| "function" "identifier" "(" type_fields_opt ")" ":" "identifier" "=" expr {}
+"function" "identifier" "(" type_fields_opt ")" "=" expr {$$ = new FunctionDeclaration($2, std::move($4), $7);}
+| "function" "identifier" "(" type_fields_opt ")" ":" "identifier" "=" expr {$$ = new FunctionDeclaration($2, std::move($4), $7, $9);}
 ;
 %%
 void yy::Parser::error(const location_type& l, const std::string& m) {

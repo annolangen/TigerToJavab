@@ -1,7 +1,7 @@
 #include "types.h"
+#include "syntax_nodes.h"
 #include "testing/catch.h"
 #include "testing/testing.h"
-#include "syntax_nodes.h"
 namespace {
 using types::InferType;
 

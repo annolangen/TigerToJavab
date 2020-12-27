@@ -26,10 +26,10 @@ class Type {
 public:
   virtual ~Type() = default;
   virtual bool Accept(TypeVisitor& visitor) const = 0;
-  
+
   // Returns element type ID for an array type.
   virtual std::optional<std::string_view> GetElementType() const { return {}; }
-  
+
   // Returns type ID for an field for a record type.
   virtual std::optional<std::string_view>
   GetFieldType(const std::string& field_id) const {
@@ -159,4 +159,3 @@ public:
     return value.Accept(*this);
   }
 };
-

@@ -66,7 +66,7 @@ public:
 
 class TypeDeclaration : public Declaration {
 public:
-  TypeDeclaration(std::string_view type_id, std::shared_ptr<Type> type)
+  TypeDeclaration(std::string_view type_id, Type* type)
       : Declaration(type_id), type_(type) {}
   bool Accept(DeclarationVisitor& visitor) const override {
     return visitor.VisitTypeDeclaration(Id(), *type_);
