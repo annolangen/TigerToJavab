@@ -7,8 +7,8 @@
 %define parse.assert
 %code requires
 {
-# include <string>
 #include "syntax_nodes.h"
+#include <string>
 class Driver;
 }
 // The parsing context.
@@ -35,16 +35,26 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
 %define api.token.prefix {TOK_}
 %token
   EOF  0  "end of file"
+  AND     "&"
   ASSIGN  ":="
-  MINUS   "-"
-  PLUS    "+"
-  STAR    "*"
-  SLASH   "/"
-  LPAREN  "("
-  RPAREN  ")"
-  COMMA   ","
   COLON   ":"
+  COMMA   ","
+  DOT     "."
   EQUAL   "="
+  GE      ">="
+  GT      ">"
+  LBRACKET "["
+  LE      "<="
+  LPAREN  "("
+  LT      "<"
+  MINUS   "-"
+  NE      "<>"
+  OR      "|"
+  PLUS    "+"
+  RBRACKET "]"
+  RPAREN  ")"
+  SLASH   "/"
+  STAR    "*"
   ARRAY	  "array"
   BREAK	  "break"
   DO	  "do"
@@ -74,36 +84,49 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
 %type  <Type*> type
 %type  <std::vector<TypeField>> type_fields_opt type_fields
 %type  <TypeField> type_field
+%type  <BinaryOp> binary_op
+%left ";";
+%left ",";
+%left ":=";
+%left "[" "(" "{";
+%left "|";
+%left "&";
+%left "<>" "=";
+%left "<" "<=" ">" ">=";
+%left "+" "-";
+%left "*" "/";
 %%
 %start unit;
 unit: expr  { driver.result.reset($1); };
 
-l_value: "identifier" { $$ = new IdLValue($1); };
+l_value:
+  "identifier" { $$ = new IdLValue($1); }
+| l_value "." "identifier" { $$ = new FieldLValue($1, $3); }
+| l_value "[" expr "]" {$$ = new IndexLValue($1, $3); }
+;
 
 expr_list:
-expr {$$.emplace_back($1);}
+  expr {$$.emplace_back($1);}
 | expr_list "," expr { $1.emplace_back($3); $$ = std::move($1); }
 ;
 expr_list_opt: %empty {} | expr_list {$$ = std::move($1);};
 expr_seq:
-expr {$$.emplace_back($1);}
+  expr {$$.emplace_back($1);}
 | expr_seq ";" expr { $1.emplace_back($3); $$ = std::move($1); }
 ;
 expr_seq_opt: %empty {} | expr_seq {$$ = std::move($1);};
 field_list:
-"identifier" "=" expr {AppendFieldValue($1, $3, $$);}
+  "identifier" "=" expr {AppendFieldValue($1, $3, $$);}
 | field_list "," "identifier" "=" expr {AppendFieldValue($3, $5, $1);}
 ;
 field_list_opt: %empty {} | field_list {$$ = std::move($1);};
-%left ":=";
-%left "+" "-";
-%left "*" "/";
 expr:
-  "string"    { $$ = new StringConstant($1);}
+  "string"    { $$ = new StringConstant($1.substr(1, $1.size()-2));}
 | "number"    { $$ = new IntegerConstant($1); }
 | "nil"       { $$ = new Nil(); }
+| l_value     { $$ = $1; }
 | "-" expr     { $$ = new Negated($2); }
-| expr "+" expr { $$ = new Binary($1, BinaryOp::kPlus, $3); }
+| expr binary_op expr { $$ = new Binary($1, $2, $3); }
 | l_value ":=" expr { $$ = new Assignment(std::shared_ptr<LValue>($1), $3); }
 | "identifier" "(" expr_list_opt ")" {$$ = new FunctionCall($1, std::move($3));}
 | "(" expr_seq_opt ")" {$$ = new Block(std::move($2));}
@@ -116,8 +139,22 @@ expr:
 | "break" {$$ = new Break();}
 | "let" declaration_list "in" expr_seq_opt "end" {$$ = new Let(std::move($2), std::move($4));}
 ;
+binary_op:
+  "+" {$$ = BinaryOp::kPlus;}
+| "-" {$$ = BinaryOp::kMinus;}
+| "*" {$$ = BinaryOp::kTimes;}
+| "/" {$$ = BinaryOp::kDivide;}
+| "=" {$$ = BinaryOp::kEqual;}
+| "<>" {$$ = BinaryOp::kUnequal;}
+| "<" {$$ = BinaryOp::kLessThan;}
+| ">" {$$ = BinaryOp::kGreaterThan;}
+| "<=" {$$ = BinaryOp::kNotGreaterThan;}
+| ">=" {$$ = BinaryOp::kNotLessThan;}
+| "&" {$$ = BinaryOp::kAnd;}
+| "|" {$$ = BinaryOp::kOr;}
+;
 declaration_list:
-declaration {$$.emplace_back($1);}
+  declaration {$$.emplace_back($1);}
 | declaration_list declaration {$1.emplace_back($2); $$ = std::move($1);}
 ;
 declaration:
@@ -146,8 +183,12 @@ variable_declaration:
 | "var" "identifier" ":" "identifier" ":=" expr {$$ = new VariableDeclaration($2, $4, $6);}
 ;
 function_declaration:
-"function" "identifier" "(" type_fields_opt ")" "=" expr {$$ = new FunctionDeclaration($2, std::move($4), $7);}
-| "function" "identifier" "(" type_fields_opt ")" ":" "identifier" "=" expr {$$ = new FunctionDeclaration($2, std::move($4), $7, $9);}
+  "function" "identifier" "(" type_fields_opt ")" "=" expr {
+    $$ = new FunctionDeclaration($2, std::move($4), $7);
+  }
+| "function" "identifier" "(" type_fields_opt ")" ":" "identifier" "=" expr {
+    $$ = new FunctionDeclaration($2, std::move($4), $7, $9);
+  }
 ;
 %%
 void yy::Parser::error(const location_type& l, const std::string& m) {

@@ -3,14 +3,15 @@
 #include "testing/catch.h"
 #include "testing/testing.h"
 namespace {
+using testing::Parse;
 using types::InferType;
 
-#define HasType(text, type) REQUIRE(InferType(*testing::Parse(text)) == (type))
+#define HasType(text, type) REQUIRE(InferType(*Parse(text)) == (type))
 
 SCENARIO("types functions", "[types]") {
   GIVEN("Leaf expressions") {
     auto anInt = []() { return new IntegerConstant(3); };
-    HasType("3", "int");
+    REQUIRE(InferType(*anInt()) == "int");
     auto aString = []() { return new StringConstant("Hello"); };
     REQUIRE(InferType(*aString()) == "string");
     auto aNil = std::make_shared<Nil>();

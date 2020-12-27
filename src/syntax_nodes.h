@@ -156,8 +156,7 @@ private:
 
 class FieldLValue : public LValue {
 public:
-  FieldLValue(std::shared_ptr<LValue> value, std::string_view id)
-      : value_(value), id_(id) {}
+  FieldLValue(LValue* value, std::string_view id) : value_(value), id_(id) {}
   bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitField(*value_, id_);
   }
@@ -173,8 +172,7 @@ private:
 
 class IndexLValue : public LValue {
 public:
-  IndexLValue(std::shared_ptr<LValue> value, Expression* expr)
-      : value_(value), expr_(expr) {}
+  IndexLValue(LValue* value, Expression* expr) : value_(value), expr_(expr) {}
   bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitIndex(*value_, *expr_);
   }
