@@ -46,6 +46,7 @@ string \"[^\"]*\"
 "-"      return yy::Parser::make_MINUS(loc);
 "."      return yy::Parser::make_DOT(loc);
 "/"      return yy::Parser::make_SLASH(loc);
+";"      return yy::Parser::make_SEMICOLON(loc);
 ":"      return yy::Parser::make_COLON(loc);
 ":="     return yy::Parser::make_ASSIGN(loc);
 "<"      return yy::Parser::make_LT(loc);

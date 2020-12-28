@@ -71,6 +71,7 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
   TYPE	  "type"
   VAR	  "var"
   WHILE	  "while"
+  SEMICOLON ";"
 ;
 %token <std::string> IDENTIFIER "identifier"
 %token <std::string> STRING_CONSTANT "string"
@@ -84,7 +85,6 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
 %type  <Type*> type
 %type  <std::vector<TypeField>> type_fields_opt type_fields
 %type  <TypeField> type_field
-%type  <BinaryOp> binary_op
 %left ";";
 %left ",";
 %left ":=";
@@ -93,8 +93,8 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
 %left "&";
 %left "<>" "=";
 %left "<" "<=" ">" ">=";
-%left "+" "-";
-%left "*" "/";
+%left MINUS PLUS;
+%left STAR SLASH;
 %%
 %start unit;
 unit: expr  { driver.result.reset($1); };
@@ -112,12 +112,12 @@ expr_list:
 expr_list_opt: %empty {} | expr_list {$$ = std::move($1);};
 expr_seq:
   expr {$$.emplace_back($1);}
-| expr_seq ";" expr { $1.emplace_back($3); $$ = std::move($1); }
+| expr_seq SEMICOLON expr { $1.emplace_back($3); $$ = std::move($1); }
 ;
 expr_seq_opt: %empty {} | expr_seq {$$ = std::move($1);};
 field_list:
   "identifier" "=" expr {AppendFieldValue($1, $3, $$);}
-| field_list "," "identifier" "=" expr {AppendFieldValue($3, $5, $1);}
+| field_list COMMA "identifier" "=" expr {AppendFieldValue($3, $5, $1);}
 ;
 field_list_opt: %empty {} | field_list {$$ = std::move($1);};
 expr:
@@ -126,7 +126,18 @@ expr:
 | "nil"       { $$ = new Nil(); }
 | l_value     { $$ = $1; }
 | "-" expr     { $$ = new Negated($2); }
-| expr binary_op expr { $$ = new Binary($1, $2, $3); }
+| expr "+" expr { $$ = new Binary($1, BinaryOp::kPlus, $3);}
+| expr "-" expr { $$ = new Binary($1, BinaryOp::kMinus, $3);}
+| expr "*" expr { $$ = new Binary($1, BinaryOp::kTimes, $3);}
+| expr "/" expr { $$ = new Binary($1, BinaryOp::kDivide, $3);}
+| expr "=" expr { $$ = new Binary($1, BinaryOp::kEqual, $3);}
+| expr "<>" expr { $$ = new Binary($1, BinaryOp::kUnequal, $3);}
+| expr "<" expr { $$ = new Binary($1, BinaryOp::kLessThan, $3);}
+| expr ">" expr { $$ = new Binary($1, BinaryOp::kGreaterThan, $3);}
+| expr "<=" expr { $$ = new Binary($1, BinaryOp::kNotGreaterThan, $3);}
+| expr ">=" expr { $$ = new Binary($1, BinaryOp::kNotLessThan, $3);}
+| expr "&" expr { $$ = new Binary($1, BinaryOp::kAnd, $3);}
+| expr "|" expr { $$ = new Binary($1, BinaryOp::kOr, $3);}
 | l_value ":=" expr { $$ = new Assignment(std::shared_ptr<LValue>($1), $3); }
 | "identifier" "(" expr_list_opt ")" {$$ = new FunctionCall($1, std::move($3));}
 | "(" expr_seq_opt ")" {$$ = new Block(std::move($2));}
@@ -138,20 +149,6 @@ expr:
 | "for" "identifier" ":=" expr "to" expr "do" expr {$$ = new For($2, $4, $6, $8);}
 | "break" {$$ = new Break();}
 | "let" declaration_list "in" expr_seq_opt "end" {$$ = new Let(std::move($2), std::move($4));}
-;
-binary_op:
-  "+" {$$ = BinaryOp::kPlus;}
-| "-" {$$ = BinaryOp::kMinus;}
-| "*" {$$ = BinaryOp::kTimes;}
-| "/" {$$ = BinaryOp::kDivide;}
-| "=" {$$ = BinaryOp::kEqual;}
-| "<>" {$$ = BinaryOp::kUnequal;}
-| "<" {$$ = BinaryOp::kLessThan;}
-| ">" {$$ = BinaryOp::kGreaterThan;}
-| "<=" {$$ = BinaryOp::kNotGreaterThan;}
-| ">=" {$$ = BinaryOp::kNotLessThan;}
-| "&" {$$ = BinaryOp::kAnd;}
-| "|" {$$ = BinaryOp::kOr;}
 ;
 declaration_list:
   declaration {$$.emplace_back($1);}

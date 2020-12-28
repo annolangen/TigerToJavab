@@ -33,7 +33,16 @@ SCENARIO("DebugString produces strings for all our classes", "[DebugString]") {
     REQUIRE(DebugString(*Parse("-33")) == "Negated{value: Int{33}}");
     REQUIRE(DebugString(*Parse("2|2")) ==
             "Binary{left: Int{2} op: | right: Int{2}}");
-    //    REQUIRE(DebugString(*Parse("1+2-3*4/5=6<>7<8>9<=a>=b&c|d")) == "");
+
+       
+        REQUIRE(DebugString(*Parse("1+2*3")) == "Binary{left: Int{1} op: + right: Binary{left: Int{2} op: * right: Int{3}}}");
+        REQUIRE(DebugString(*Parse("1*2+3")) == "Binary{left: Binary{left: Int{1} op: * right: Int{2}} op: + right: Int{3}}");
+
+
+
+
+
+
     REQUIRE(DebugString(*Parse("a:=2")) ==
             "Assign{l_value: Id{id: a} expr: Int{2}}");
     REQUIRE(DebugString(*Parse("foo()")) == "FunctionCall{id: foo }");
@@ -41,8 +50,7 @@ SCENARIO("DebugString produces strings for all our classes", "[DebugString]") {
             "FunctionCall{id: sin arg: Int{3}}");
     REQUIRE(DebugString(*Parse("bar(3, 1)")) ==
             "FunctionCall{id: bar arg: Int{3} arg: Int{1}}");
-    // Fails with: 1.97: syntax error, unexpected )
-    REQUIRE(DebugString(*Parse("(3; 1)")) == "(3; 1)");
+    REQUIRE(DebugString(*Parse("(3; 1)")) == "Block{expr: Int{3} expr: Int{1}}");
   }
 }
 } // namespace
