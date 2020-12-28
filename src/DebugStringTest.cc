@@ -34,14 +34,12 @@ SCENARIO("DebugString produces strings for all our classes", "[DebugString]") {
     REQUIRE(DebugString(*Parse("2|2")) ==
             "Binary{left: Int{2} op: | right: Int{2}}");
 
-       
-        REQUIRE(DebugString(*Parse("1+2*3")) == "Binary{left: Int{1} op: + right: Binary{left: Int{2} op: * right: Int{3}}}");
-        REQUIRE(DebugString(*Parse("1*2+3")) == "Binary{left: Binary{left: Int{1} op: * right: Int{2}} op: + right: Int{3}}");
-
-
-
-
-
+    REQUIRE(DebugString(*Parse("1+2*3")) ==
+            "Binary{left: Int{1} op: + right: Binary{left: Int{2} op: * right: "
+            "Int{3}}}");
+    REQUIRE(DebugString(*Parse("1*2+3")) ==
+            "Binary{left: Binary{left: Int{1} op: * right: Int{2}} op: + "
+            "right: Int{3}}");
 
     REQUIRE(DebugString(*Parse("a:=2")) ==
             "Assign{l_value: Id{id: a} expr: Int{2}}");
@@ -50,7 +48,8 @@ SCENARIO("DebugString produces strings for all our classes", "[DebugString]") {
             "FunctionCall{id: sin arg: Int{3}}");
     REQUIRE(DebugString(*Parse("bar(3, 1)")) ==
             "FunctionCall{id: bar arg: Int{3} arg: Int{1}}");
-    REQUIRE(DebugString(*Parse("(3; 1)")) == "Block{expr: Int{3} expr: Int{1}}");
+    REQUIRE(DebugString(*Parse("(3; 1)")) ==
+            "Block{expr: Int{3} expr: Int{1}}");
   }
 }
 } // namespace
