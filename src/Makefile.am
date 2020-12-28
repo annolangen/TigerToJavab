@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-tc_srcs = BinaryOp.cc ToString.cc DebugString.cc types.cc parser.yy scanner.ll driver.cc
+tc_srcs = BinaryOp.cc ToString.cc DebugString.cc types.cc parser.yy scanner.ll driver.cc emit.cc
 
 bin_PROGRAMS = tc
 tc_SOURCES = tc.cc $(tc_srcs)
@@ -9,6 +9,7 @@ tc_test_SOURCES = tc_test.cc $(tc_srcs) testing/testing.cc
 tc_test_SOURCES += DebugStringTest.cc
 tc_test_SOURCES += ScopedMapTest.cc
 tc_test_SOURCES += ToStringTest.cc
+tc_test_SOURCES += emitTest.cc
 tc_test_SOURCES += typesTest.cc
 tc_test_SOURCES += utilTest.cc
 

@@ -1,6 +1,6 @@
 public class Std {
   public static void print(String s) { System.out.print(s); }
-  public static void print(int i) { System.out.print(Integer.toString(i)); }
+  public static void printi(int i) { System.out.print(Integer.toString(i)); }
   public static void flush() { System.out.flush(); }
   public static String getChar() {
     try {
