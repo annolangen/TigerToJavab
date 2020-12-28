@@ -42,7 +42,7 @@ struct Appendable {
     p.expr.Accept(p.visitor);
     return *this;
   }
-  Appendable& operator<<(std::function<Appendable&(Appendable&)> f) {
+  Appendable& operator<<(const std::function<Appendable&(Appendable&)>& f) {
     return f(*this);
   }
   operator bool() { return true; }
