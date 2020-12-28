@@ -85,9 +85,14 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
 %type  <Type*> type
 %type  <std::vector<TypeField>> type_fields_opt type_fields
 %type  <TypeField> type_field
+
+
 %left ";";
 %left ",";
 %left ":=";
+%nonassoc "then";
+%nonassoc "else";
+%nonassoc "while" "do" "for" "of";
 %left "[" "(" "{";
 %left "|";
 %left "&";
@@ -95,6 +100,9 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
 %left "<" "<=" ">" ">=";
 %left MINUS PLUS;
 %left STAR SLASH;
+
+%expect 1; //lvalue and array litteral. 
+
 %%
 %start unit;
 unit: expr  { driver.result.reset($1); };
