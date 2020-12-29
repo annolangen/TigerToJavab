@@ -1,6 +1,5 @@
 #include "emit.h"
 #include <functional>
-#include <iostream>
 #include <optional>
 #include <unordered_map>
 
@@ -104,8 +103,6 @@ struct MethodInfo {
     Put2(os, name_index);
     Put2(os, descriptor_index);
     Put2(os, attributes.size());
-    std::cout << "Will write " << attributes.size() << " attributes"
-              << std::endl;
     for (const auto& a : attributes) a->Emit(os);
   }
 };
@@ -179,6 +176,7 @@ struct StringConstant : Constant, Pushable {
   u2 string_index;
   Tag tag() const override { return kString; }
   bool Matches(u2 index) const override { return index == string_index; }
+  std::optional<StringConstant*> string() override { return this; }
   void Emit(std::ostream& os) const override {
     os.put(tag());
     Put2(os, string_index);
@@ -199,6 +197,7 @@ struct ClassConstant : Constant {
   u2 name_index;
   Tag tag() const override { return kClass; }
   bool Matches(u2 index) const override { return index == name_index; }
+  std::optional<ClassConstant*> clazz() override { return this; }
   void Emit(std::ostream& os) const override {
     os.put(tag());
     Put2(os, name_index);
@@ -209,6 +208,7 @@ struct Utf8Constant : Constant {
   std::string text;
   Tag tag() const override { return kUtf8; }
   bool Matches(std::string_view match_text) const { return text == match_text; }
+  std::optional<Utf8Constant*> utf8() override { return this; }
   void Emit(std::ostream& os) const override {
     os.put(tag());
     u2 length = text.length();
@@ -276,8 +276,6 @@ struct JvmProgram : Program {
   }
 
   void Emit(std::ostream& os) override {
-    std::cout << "Start program Emit" << std::endl;
-
     DefineConstructor();
     u2 this_class = classConstant("Main")->index;
     u2 super_class = classConstant("java/lang/Object")->index;
@@ -286,9 +284,6 @@ struct JvmProgram : Program {
     Put2(os, 0);  // minor version
     Put2(os, 50); // major version
     Put2(os, constant_pool.size() + 1);
-    std::cout << "Will write " << constant_pool.size() << " constants"
-              << std::endl;
-
     for (const auto& c : constant_pool) c->Emit(os);
     Put2(os, 0x20); // flags
     Put2(os, this_class);
@@ -296,8 +291,6 @@ struct JvmProgram : Program {
     Put2(os, 0); // interfaces count
     Put2(os, 0); // field count
     Put2(os, methods.size());
-    std::cout << "Will write " << methods.size() << " methods" << std::endl;
-
     for (const auto& m : methods) m.Emit(os);
     Put2(os, 0); // attributes count
   }
@@ -311,13 +304,11 @@ struct JvmProgram : Program {
   Utf8Constant* utf8Constant(std::string_view text) {
     for (auto& c : constant_pool) {
       if (c->tag() == ClassConstant::kUtf8 && c->Matches(text)) {
-        DebugPool();
         return *c->utf8();
       }
     }
     Utf8Constant* result = Adopt(new Utf8Constant());
     result->text = text;
-    DebugPool();
     return result;
   }
 
@@ -383,15 +374,6 @@ struct JvmProgram : Program {
     return {flags, stringConstant(name)->index,
             stringConstant(descriptor)->index};
   }
-
-void DebugPool() {
-  int i = 0;
-  for (auto const &c:constant_pool) {
-    if (c->index!=++i) {
-      std::cout << "constant "<<i<< " differs from " << c->index << std::endl;
-    }
-  }
-}
 
   std::vector<std::unique_ptr<Constant>> constant_pool;
   std::vector<MethodInfo> methods;
