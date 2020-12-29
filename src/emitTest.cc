@@ -2,6 +2,7 @@
 #include "instruction.h"
 #include "testing/catch.h"
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <streambuf>
 #include <string>
@@ -25,7 +26,7 @@ SCENARIO("emits class file", "[emit]") {
     }
     std::ofstream out("/tmp/Main.class");
     program->Emit(out);
-   // REQUIRE(os.str() == ReadFile("../../src/testdata/Main.class"));
+    // REQUIRE(os.str() == ReadFile("../../src/testdata/Main.class"));
   }
 }
 } // namespace
