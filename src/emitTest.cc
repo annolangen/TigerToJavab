@@ -12,13 +12,13 @@ std::string ReadFile(const char* path) {
 }
 SCENARIO("emits class file", "[emit]") {
   GIVEN("Hello World") {
-    Program program;
-    auto text = program.DefineStringConstant("Hello, World!\n");
-    if (auto f = program.LookupLibraryFunction("print"); f) {
-      f->Call(*program.GetMainCodeBlock(), {text.get()});
+    auto program = Program::JavaProgram();
+    auto text = program->DefineStringConstant("Hello, World!\n");
+    if (auto f = program->LookupLibraryFunction("print"); f) {
+      f->Call(*program->GetMainCodeBlock(), {text});
     }
     std::ostringstream os;
-    program.Emit(os);
+    program->Emit(os);
     REQUIRE(os.str() == ReadFile("../../src/testdata/Main.class"));
   }
 }

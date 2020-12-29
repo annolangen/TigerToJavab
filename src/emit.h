@@ -1,16 +1,16 @@
 #pragma once
 #include <memory>
 #include <ostream>
+#include <sstream>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
 namespace emit {
 
 // Abstract block of JVM byte codes.
-class CodeBlock {
-public:
+struct CodeBlock {
   virtual ~CodeBlock() = default;
+  std::ostringstream bytes;
 };
 
 // Things that can emit instructions to push one value on the JVM stack.
@@ -22,16 +22,12 @@ public:
   virtual void Push(CodeBlock& block) const = 0;
 };
 
-struct Constant {
-  virtual ~Constant() = default;
-};
-
 // Defined or standard library functions.
 class Invocable {
 public:
   virtual ~Invocable() = default;
-  virtual void Invoke(CodeBlock& block) = 0;
-  void Call(CodeBlock& block, const std::vector<const Pushable*>& args) {
+  virtual void Invoke(CodeBlock& block) const = 0;
+  void Call(CodeBlock& block, const std::vector<const Pushable*>& args) const {
     for (const auto& a : args) {
       a->Push(block);
     }
@@ -39,24 +35,18 @@ public:
   }
 };
 
-class Program {
-public:
-  Program();
-  Program(const Program&) = delete;
+struct Program {
+  // Returns Program instance for Java class files.
+  static std::unique_ptr<Program> JavaProgram();
 
-  std::unique_ptr<Pushable> DefineStringConstant(std::string_view text);
-  std::unique_ptr<Invocable> LookupLibraryFunction(std::string_view name);
+  virtual ~Program() = default;
 
   // Returns code block for main method, which is owned by the Program
-  CodeBlock* GetMainCodeBlock() { return main_.get(); }
+  virtual CodeBlock* GetMainCodeBlock() = 0;
 
   // Writes Java class file to given stream
-  void Emit(std::ostream& os);
-
-private:
-  std::unique_ptr<CodeBlock> main_;
-  std::vector<std::unique_ptr<Constant>> constant_pool_;
-  std::unordered_map<std::string, int> pool_index_by_string_;
-  std::unordered_map<int, int> pool_index_by_int_;
+  virtual void Emit(std::ostream& os) = 0;
+  virtual const Pushable* DefineStringConstant(std::string_view text) = 0;
+  virtual const Invocable* LookupLibraryFunction(std::string_view name) = 0;
 };
 } // namespace emit
