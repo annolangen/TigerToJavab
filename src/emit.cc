@@ -26,15 +26,64 @@ inline void Put4(std::ostream& os, u4 v) {
   Put2(os, v & 0xffff);
 }
 
+struct CodeAttribute;
+
 // https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.7
 struct AttributeInfo {
+  enum Tag {
+    kConstantValue,
+    kCode,
+    kStackMapTable,
+    kExceptions,
+    kInnerClasses,
+    kEnclosingMethod,
+    kSynthetic,
+    kSignature,
+    kSourceFile,
+    kSourceDebugExtension,
+    kLineNumberTable,
+    kLocalVariableTable,
+    kLocalVariableTypeTable,
+    kDeprecated,
+    kRuntimeVisibleAnnotations,
+    kRuntimeInvisibleAnnotations,
+    kRuntimeVisibleParameterAnnotations,
+    kRuntimeInvisibleParameterAnnotations,
+    kAnnotationDefault,
+    kBootstrapMethods
+  };
   u2 attribute_name_index;
-  std::string info;
   void Emit(std::ostream& os) const {
     Put2(os, attribute_name_index);
-    Put4(os, info.length());
-    os.write(info.data(), info.length());
+    std::string info_bytes = InfoBytes();
+    Put4(os, info_bytes.length());
+    os.write(info_bytes.data(), info_bytes.length());
   }
+  // Emit length and info bytes
+  virtual std::string InfoBytes() const = 0;
+  virtual Tag tag() const = 0;
+  virtual std::optional<CodeAttribute*> code() { return {}; }
+};
+
+struct CodeAttribute : AttributeInfo {
+  u2 max_stack;
+  u2 max_locals;
+  std::string code_bytes;
+  std::vector<std::unique_ptr<AttributeInfo>> attributes;
+
+  std::string InfoBytes() const override {
+    std::ostringstream os;
+    Put2(os, max_stack);
+    Put2(os, max_locals);
+    Put4(os, code_bytes.length());
+    os.write(code_bytes.data(), code_bytes.length());
+    Put2(os, 0); // exception table length
+    Put2(os, attributes.size());
+    for (const auto& a : attributes) a->Emit(os);
+    return os.str();
+  }
+  virtual Tag tag() const override { return AttributeInfo::kCode; }
+  virtual std::optional<CodeAttribute*> code() { return this; }
 };
 
 // https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.6
@@ -167,7 +216,18 @@ struct NameAndTypeConstant : Constant {
   }
 };
 
-class FunctionCodeBlock : public CodeBlock {};
+class FunctionCodeBlock : public CodeBlock {
+  CodeAttribute codeAttribute(u2 code_name_index) {
+    CodeAttribute result;
+    result.attribute_name_index = code_name_index;
+    result.code_bytes = bytes.str();
+    // TODO compute from code_bytes
+    result.max_stack = 10;
+    result.max_locals = 10;
+    return result;
+  }
+};
+
 class LibraryFunction : public Invocable {};
 
 const std::unordered_map<std::string_view, const char*>
@@ -181,6 +241,14 @@ std::optional<const char*> LibraryFunctionType(std::string_view name) {
   return {};
 }
 
+class JvmFunction : public Function {
+public:
+  JvmFunction() : code_block_(std::make_unique<FunctionCodeBlock>()) {}
+  void Invoke(CodeBlock& block) const override {}
+  CodeBlock* codeBlock() override { return code_block_.get(); }
+  std::unique_ptr<FunctionCodeBlock> code_block_;
+};
+
 struct JvmProgram : Program {
   JvmProgram() : main(std::make_unique<FunctionCodeBlock>()) {}
   ~JvmProgram() = default;
@@ -193,10 +261,28 @@ struct JvmProgram : Program {
     return nullptr;
   }
 
+  JvmFunction* DefineFunction(u2 flags, std::string_view name,
+                              std::string_view descriptor) override {
+    methods.push_back(methodInfo(flags, name, descriptor));
+    functions.emplace_back();
+    return &*functions.rbegin();
+  };
+
+  void DefineConstructor() {
+    JvmFunction* init_function = DefineFunction(0, "<init>", "()V");
+    FunctionCodeBlock* block = init_function->code_block_.get();
+    std::ostream& os=    block->bytes;
+    os.put(Instruction::_aload_0);
+    os.put(Instruction::_invokespecial);
+    Put2(os, methodRefConstant("java/lang/Object", "<init>", "()V")->index);
+    os.put(Instruction::_return);    
+  }
+
   void Emit(std::ostream& os) override {
+    DefineConstructor();
     u2 this_class = classConstant("Main")->index;
     u2 super_class = classConstant("java/lang/Object")->index;
-    methodRefConstant("java/lang/Object", "<init>", "()V");
+
 
     Put4(os, 0xcafebabe);
     Put2(os, 0);  // minor version
@@ -286,11 +372,18 @@ struct JvmProgram : Program {
     return result;
   }
 
+  MethodInfo methodInfo(u2 flags, std::string_view name,
+                        std::string_view descriptor) {
+    return {flags, stringConstant(name)->index,
+            stringConstant(descriptor)->index};
+  }
+
   std::unique_ptr<CodeBlock> main;
   std::vector<std::unique_ptr<Constant>> constant_pool;
   std::vector<MethodInfo> methods;
+  std::vector<JvmFunction> functions;
 };
-} // namespace
+} // namespace emit
 
 std::unique_ptr<Program> Program::JavaProgram() {
   return std::make_unique<JvmProgram>();

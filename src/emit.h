@@ -35,6 +35,24 @@ public:
   }
 };
 
+class Function : public Invocable {
+public:
+  virtual CodeBlock* codeBlock() = 0;
+};
+
+enum Flag {
+  ACC_PUBLIC = 0x0001,    // Declared public; may be accessed from
+                          // outside its package.
+  ACC_FINAL = 0x0010,     // Declared final; no subclasses allowed.
+  ACC_SUPER = 0x0020,     // Treat superclass methods specially when
+                          // invoked by the invokespecial instruction.
+  ACC_INTERFACE = 0x0200, // Is an interface, not a class.
+  ACC_ABSTRACT = 0x0400,  // Declared abstract; must not be instantiated.
+  ACC_SYNTHETIC = 0x1000, // Declared synthetic; not present in the source code.
+  ACC_ANNOTATION = 0x2000, // Declared as an annotation type.
+  ACC_ENUM = 0x4000        // Declared as an enum type.
+};
+
 struct Program {
   // Returns Program instance for Java class files.
   static std::unique_ptr<Program> JavaProgram();
@@ -48,5 +66,7 @@ struct Program {
   virtual void Emit(std::ostream& os) = 0;
   virtual const Pushable* DefineStringConstant(std::string_view text) = 0;
   virtual const Invocable* LookupLibraryFunction(std::string_view name) = 0;
+  virtual Function* DefineFunction(uint16_t flags, std::string_view name,
+                                   std::string_view descriptor) = 0;
 };
 } // namespace emit
