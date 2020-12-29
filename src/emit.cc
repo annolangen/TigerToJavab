@@ -65,7 +65,13 @@ struct AttributeInfo {
   virtual std::optional<CodeAttribute*> code() { return {}; }
 };
 
+// https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.7.3
 struct CodeAttribute : AttributeInfo {
+  CodeAttribute(u2 code_name_index, std::string_view instructions)
+      : max_stack(10), max_locals(10), code_bytes(instructions) {
+    attribute_name_index = code_name_index;
+  }
+
   u2 max_stack;
   u2 max_locals;
   std::string code_bytes;
@@ -91,13 +97,13 @@ struct MethodInfo {
   u2 access_flags;
   u2 name_index;
   u2 descriptor_index;
-  std::vector<AttributeInfo> attributes;
+  std::vector<std::unique_ptr<AttributeInfo>> attributes;
   void Emit(std::ostream& os) const {
     Put2(os, access_flags);
     Put2(os, name_index);
     Put2(os, descriptor_index);
     Put2(os, attributes.size());
-    for (const auto& a : attributes) a.Emit(os);
+    for (const auto& a : attributes) a->Emit(os);
   }
 };
 
@@ -171,13 +177,13 @@ struct StringConstant : Constant, Pushable {
     Put2(os, string_index);
   }
 
-  void Push(CodeBlock& block) const override {
+  void Push(std::ostream& os) const override {
     if (string_index < 256) {
-      block.bytes.put(Instruction::_ldc);
-      block.bytes.put(string_index);
+      os.put(Instruction::_ldc);
+      os.put(string_index);
     } else {
-      block.bytes.put(Instruction::_ldc_w);
-      Put2(block.bytes, string_index);
+      os.put(Instruction::_ldc_w);
+      Put2(os, string_index);
     }
   }
 };
@@ -216,18 +222,6 @@ struct NameAndTypeConstant : Constant {
   }
 };
 
-class FunctionCodeBlock : public CodeBlock {
-  CodeAttribute codeAttribute(u2 code_name_index) {
-    CodeAttribute result;
-    result.attribute_name_index = code_name_index;
-    result.code_bytes = bytes.str();
-    // TODO compute from code_bytes
-    result.max_stack = 10;
-    result.max_locals = 10;
-    return result;
-  }
-};
-
 class LibraryFunction : public Invocable {};
 
 const std::unordered_map<std::string_view, const char*>
@@ -241,18 +235,10 @@ std::optional<const char*> LibraryFunctionType(std::string_view name) {
   return {};
 }
 
-class JvmFunction : public Function {
-public:
-  JvmFunction() : code_block_(std::make_unique<FunctionCodeBlock>()) {}
-  void Invoke(CodeBlock& block) const override {}
-  CodeBlock* codeBlock() override { return code_block_.get(); }
-  std::unique_ptr<FunctionCodeBlock> code_block_;
-};
-
 struct JvmProgram : Program {
-  JvmProgram() : main(std::make_unique<FunctionCodeBlock>()) {}
+  JvmProgram() {}
   ~JvmProgram() = default;
-  CodeBlock* GetMainCodeBlock() override { return main.get(); }
+
   const Pushable* DefineStringConstant(std::string_view text) override {
     return stringConstant(text);
   }
@@ -261,21 +247,21 @@ struct JvmProgram : Program {
     return nullptr;
   }
 
-  JvmFunction* DefineFunction(u2 flags, std::string_view name,
-                              std::string_view descriptor) override {
+  void DefineFunction(u2 flags, std::string_view name,
+                      std::string_view descriptor,
+                      std::string_view code_bytes) override {
     methods.push_back(methodInfo(flags, name, descriptor));
-    functions.emplace_back();
-    return &*functions.rbegin();
+    methods.rbegin()->attributes.emplace_back(
+        new CodeAttribute(stringConstant("Code")->index, code_bytes));
   };
 
   void DefineConstructor() {
-    JvmFunction* init_function = DefineFunction(0, "<init>", "()V");
-    FunctionCodeBlock* block = init_function->code_block_.get();
-    std::ostream& os=    block->bytes;
+    std::ostringstream os;
     os.put(Instruction::_aload_0);
     os.put(Instruction::_invokespecial);
     Put2(os, methodRefConstant("java/lang/Object", "<init>", "()V")->index);
-    os.put(Instruction::_return);    
+    os.put(Instruction::_return);
+    DefineFunction(0, "<init>", "()V", os.str());
   }
 
   void Emit(std::ostream& os) override {
@@ -283,10 +269,9 @@ struct JvmProgram : Program {
     u2 this_class = classConstant("Main")->index;
     u2 super_class = classConstant("java/lang/Object")->index;
 
-
     Put4(os, 0xcafebabe);
     Put2(os, 0);  // minor version
-    Put2(os, 55); // major version
+    Put2(os, 50); // major version
     Put2(os, constant_pool.size() + 1);
     for (const auto& c : constant_pool) c->Emit(os);
     Put2(os, 0x20); // flags
@@ -316,14 +301,14 @@ struct JvmProgram : Program {
   }
 
   StringConstant* stringConstant(std::string_view text) {
-    Utf8Constant* utf8 = utf8Constant(text);
+    u2 utf8_index = utf8Constant(text)->index;
     for (auto& c : constant_pool) {
-      if (c->tag() == ClassConstant::kString && c->Matches(utf8->index)) {
+      if (c->tag() == ClassConstant::kString && c->Matches(utf8_index)) {
         return *c->string();
       }
     }
     StringConstant* result = Adopt(new StringConstant());
-    result->string_index = utf8->index;
+    result->string_index = utf8_index;
     return result;
   }
 
@@ -378,12 +363,10 @@ struct JvmProgram : Program {
             stringConstant(descriptor)->index};
   }
 
-  std::unique_ptr<CodeBlock> main;
   std::vector<std::unique_ptr<Constant>> constant_pool;
   std::vector<MethodInfo> methods;
-  std::vector<JvmFunction> functions;
 };
-} // namespace emit
+} // namespace
 
 std::unique_ptr<Program> Program::JavaProgram() {
   return std::make_unique<JvmProgram>();
