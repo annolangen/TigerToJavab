@@ -1,9 +1,7 @@
 #pragma once
 
 // See https://en.wikipedia.org/wiki/Java_bytecode_instruction_listings
-enum Instruction {
-  _illegal = -1,
-
+enum Instruction : uint8_t {
   // Java bytecodes
   _nop = 0,               // 0x00
   _aconst_null = 1,       // 0x01

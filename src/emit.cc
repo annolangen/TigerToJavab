@@ -52,6 +52,7 @@ struct AttributeInfo {
     kAnnotationDefault,
     kBootstrapMethods
   };
+  virtual ~AttributeInfo() = default;
   u2 attribute_name_index;
   void Emit(std::ostream& os) const {
     Put2(os, attribute_name_index);
@@ -89,7 +90,7 @@ struct CodeAttribute : AttributeInfo {
     return os.str();
   }
   virtual Tag tag() const override { return AttributeInfo::kCode; }
-  virtual std::optional<CodeAttribute*> code() { return this; }
+  virtual std::optional<CodeAttribute*> code() override { return this; }
 };
 
 // https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.6
@@ -207,7 +208,9 @@ struct ClassConstant : Constant {
 struct Utf8Constant : Constant {
   std::string text;
   Tag tag() const override { return kUtf8; }
-  bool Matches(std::string_view match_text) const { return text == match_text; }
+  bool Matches(std::string_view match_text) const override {
+    return text == match_text;
+  }
   std::optional<Utf8Constant*> utf8() override { return this; }
   void Emit(std::ostream& os) const override {
     os.put(tag());
@@ -371,8 +374,7 @@ struct JvmProgram : Program {
 
   MethodInfo methodInfo(u2 flags, std::string_view name,
                         std::string_view descriptor) {
-    return {flags, utf8Constant(name)->index,
-            utf8Constant(descriptor)->index};
+    return {flags, utf8Constant(name)->index, utf8Constant(descriptor)->index};
   }
 
   std::vector<std::unique_ptr<Constant>> constant_pool;
