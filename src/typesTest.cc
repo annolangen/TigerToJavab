@@ -57,7 +57,15 @@ SCENARIO("types functions", "[types]") {
         REQUIRE(InferType(let) == "int");
       }
     }
-    GIVEN("Parsed test") { HasType("1+1", "int"); }
+    GIVEN("Parsed test") {
+      HasType("3", "int");
+      HasType("\"Hello\"", "string");
+      HasType("nil", "none");
+      HasType("break", "none");
+      HasType("IntArray [3] of 0", "IntArray");
+      HasType("Bulk {height=6, weight=200}", "Bulk");
+      HasType("1+1", "int");
+    }
     // Composite expressions
     // lvalue
     // lvalue := expr

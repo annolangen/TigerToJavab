@@ -6,6 +6,11 @@ using types::EnterScope;
 using types::InferType;
 using types::ScopeExiter;
 
+// Type inference used two ScopedMaps to reflect that types have a
+// distinct namespace. ScopedMap declared_type_by_name tracks type
+// declarations whereas ScopedMap inferred_type_by_name tracks the
+// type name of declared variables and function return values.
+
 // Visitor that infers the type of an L-value in the context of
 // declarations. Writes the inferred type to string `type`.
 class InferLValueVisitor : public LValueVisitor {

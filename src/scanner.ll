@@ -40,6 +40,8 @@ string \"[^\"]*\"
 "&"      return yy::Parser::make_AND(loc);
 "("      return yy::Parser::make_LPAREN(loc);
 ")"      return yy::Parser::make_RPAREN(loc);
+"{"      return yy::Parser::make_LBRACE(loc);
+"}"      return yy::Parser::make_RBRACE(loc);
 "*"      return yy::Parser::make_STAR(loc);
 "+"      return yy::Parser::make_PLUS(loc);
 ","      return yy::Parser::make_COMMA(loc);
@@ -85,7 +87,7 @@ string \"[^\"]*\"
 }
 {string}   return yy::Parser::make_STRING_CONSTANT(yytext, loc);
 {id}       return yy::Parser::make_IDENTIFIER(yytext, loc);
-.          driver.error(loc, "invalid character");
+.          driver.error(loc, std::string("invalid character '")+yytext+"'");
 <<EOF>>    return yy::Parser::make_EOF(loc);
 %%
 
