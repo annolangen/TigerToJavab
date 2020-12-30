@@ -183,12 +183,12 @@ struct StringConstant : Constant, Pushable {
   }
 
   void Push(std::ostream& os) const override {
-    if (string_index < 256) {
+    if (index < 256) {
       os.put(Instruction::_ldc);
-      os.put(string_index);
+      os.put(index);
     } else {
       os.put(Instruction::_ldc_w);
-      Put2(os, string_index);
+      Put2(os, index);
     }
   }
 };
@@ -263,7 +263,7 @@ struct JvmProgram : Program {
                       std::string_view code_bytes) override {
     methods.push_back(methodInfo(flags, name, descriptor));
     methods.rbegin()->attributes.emplace_back(
-        new CodeAttribute(stringConstant("Code")->index, code_bytes));
+        new CodeAttribute(utf8Constant("Code")->index, code_bytes));
   };
 
   void DefineConstructor() {
@@ -371,8 +371,8 @@ struct JvmProgram : Program {
 
   MethodInfo methodInfo(u2 flags, std::string_view name,
                         std::string_view descriptor) {
-    return {flags, stringConstant(name)->index,
-            stringConstant(descriptor)->index};
+    return {flags, utf8Constant(name)->index,
+            utf8Constant(descriptor)->index};
   }
 
   std::vector<std::unique_ptr<Constant>> constant_pool;
