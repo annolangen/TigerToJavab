@@ -11,13 +11,13 @@ using KVPair = std::pair<std::string, std::string>;
 using KVPairs = std::vector<KVPair>;
 
 struct ExprVisitorPair {
-  const char* key;
+  const std::string_view key;
   const Expression& expr;
   ExpressionVisitor& visitor;
 };
 
 struct Appendable {
-  Appendable& operator<<(const std::string& s) {
+  Appendable& operator<<(const std::string_view s) {
     out += s;
     return *this;
   }
@@ -45,6 +45,7 @@ struct Appendable {
   Appendable& operator<<(const std::function<Appendable&(Appendable&)>& f) {
     return f(*this);
   }
+  // So that returning an Appendable is like "return true" in a Visit* function.
   operator bool() { return true; }
   std::string& out;
 };
@@ -144,20 +145,32 @@ public:
   }
   bool VisitRecord(const std::string& type_id,
                    const std::vector<FieldValue>& field_values) override {
-    return true;
+    emit(out_) << "Record{";
+    const char* sep = "";
+    for (const auto& f : field_values) {
+      emit(out_) << sep << ExprVisitorPair{f.id, *f.expr, *this};
+      sep = " ";
+    }
+    return emit(out_) << "}";
   }
   bool VisitArray(const std::string& type_id, const Expression& size,
                   const Expression& value) override {
-    return size.Accept(*this) && value.Accept(*this);
+    return emit(out_) << "Array{" << KVPair{"type_id", type_id}
+                      << ExprVisitorPair{" size", size, *this}
+                      << ExprVisitorPair{" value", value, *this} << "}";
   }
   bool VisitIfThen(const Expression& condition,
                    const Expression& expr) override {
-    return condition.Accept(*this) && expr.Accept(*this);
+    return emit(out_) << "IfThen{"
+                      << ExprVisitorPair{"condition", condition, *this}
+                      << ExprVisitorPair{" expr", expr, *this} << "}";
   }
   bool VisitIfThenElse(const Expression& condition, const Expression& then_expr,
                        const Expression& else_expr) override {
-    return condition.Accept(*this) && then_expr.Accept(*this) &&
-           else_expr.Accept(*this);
+    return emit(out_) << "IfThen{"
+                      << ExprVisitorPair{"condition", condition, *this}
+                      << ExprVisitorPair{" then_expr", then_expr, *this}
+                      << ExprVisitorPair{" else_expr", else_expr, *this} << "}";
   }
   bool VisitWhile(const Expression& condition,
                   const Expression& body) override {

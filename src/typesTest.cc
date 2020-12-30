@@ -64,7 +64,14 @@ SCENARIO("types functions", "[types]") {
       HasType("break", "none");
       HasType("IntArray [3] of 0", "IntArray");
       HasType("Bulk {height=6, weight=200}", "Bulk");
-      HasType("1+1", "int");
+      HasType("-3", "int");
+      HasType("1*1", "int");
+      HasType("\"hello\"+\"world\"", "string");
+      HasType("if 1 then \"hello\"", "none");
+      HasType("if 1 then \"you\" else \"world\"", "string");
+      HasType("while 1 then \"hello\"", "none");
+      HasType("for i := 1 to 3 do 6", "none");
+      HasType("let var a := 3 in a", "int");
     }
     // Composite expressions
     // lvalue
