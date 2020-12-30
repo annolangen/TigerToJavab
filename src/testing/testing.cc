@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 2
 #include "testing.h"
 #include "../driver.h"
 #include <cstdio>
