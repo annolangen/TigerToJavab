@@ -69,9 +69,9 @@ SCENARIO("types functions", "[types]") {
       HasType("\"hello\"+\"world\"", "string");
       HasType("if 1 then \"hello\"", "none");
       HasType("if 1 then \"you\" else \"world\"", "string");
-      HasType("while 1 then \"hello\"", "none");
+      HasType("while 1 do \"hello\"", "none");
       HasType("for i := 1 to 3 do 6", "none");
-      HasType("let var a := 3 in a", "int");
+      HasType("let var a := 3 in 3 + a end", "int");
     }
     // Composite expressions
     // lvalue

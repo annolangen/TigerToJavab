@@ -65,6 +65,7 @@ inline void AppendFieldValue(const std::string& id, Expression* expr,
   FOR	  "for"
   FUNCTION	  "function"
   IF	  "if"
+  IN    "in"
   LET	  "let"
   NIL	  "nil"
   OF	  "of"
