@@ -1,7 +1,7 @@
 #include "compiler.h"
 #include "emit.h"
 #include "instruction.h"
-#include <assert.h>
+#include <cassert>
 #include <fstream>
 #include <vector>
 
@@ -17,26 +17,26 @@ public:
     instruction_streams_.push_back(&main_os);
   }
 
-  virtual bool VisitStringConstant(const std::string& text) {
+  bool VisitStringConstant(const std::string& text) override {
     pushables_.push_back(program_.DefineStringConstant(text));
     return true;
   }
-  virtual bool VisitIntegerConstant(int value) { return true; }
-  virtual bool VisitNil() { return true; }
-  virtual bool VisitLValue(const LValue& value) { return true; }
-  virtual bool VisitNegated(const Expression& value) {
+  bool VisitIntegerConstant(int value) override { return true; }
+  bool VisitNil() override { return true; }
+  bool VisitLValue(const LValue& value) override { return true; }
+  bool VisitNegated(const Expression& value) override {
     return value.Accept(*this);
   }
-  virtual bool VisitBinary(const Expression& left, BinaryOp op,
-                           const Expression& right) {
+  bool VisitBinary(const Expression& left, BinaryOp op,
+                           const Expression& right) override {
     return left.Accept(*this) && right.Accept(*this);
   }
-  virtual bool VisitAssignment(const LValue& value, const Expression& expr) {
+  bool VisitAssignment(const LValue& value, const Expression& expr) override {
     return expr.Accept(*this);
   }
-  virtual bool
+  bool
   VisitFunctionCall(const std::string& id,
-                    const std::vector<std::shared_ptr<Expression>>& args) { 
+                    const std::vector<std::shared_ptr<Expression>>& args) override { 
                       //save the size of pushables for later - will make argument counting easier.
     for (const auto& a : args) a->Accept(*this);
 
@@ -56,40 +56,40 @@ public:
     }
     return true;
   }
-  virtual bool
-  VisitBlock(const std::vector<std::shared_ptr<Expression>>& exprs) {
+  bool
+  VisitBlock(const std::vector<std::shared_ptr<Expression>>& exprs) override {
     return std::all_of(exprs.begin(), exprs.end(),
                        [this](const auto& arg) { return arg->Accept(*this); });
   }
-  virtual bool VisitRecord(const std::string& type_id,
-                           const std::vector<FieldValue>& field_values) {
+  bool VisitRecord(const std::string& type_id,
+                           const std::vector<FieldValue>& field_values) override {
     return true;
   }
-  virtual bool VisitArray(const std::string& type_id, const Expression& size,
-                          const Expression& value) {
+  bool VisitArray(const std::string& type_id, const Expression& size,
+                          const Expression& value) override {
     return size.Accept(*this) && value.Accept(*this);
   }
-  virtual bool VisitIfThen(const Expression& condition,
-                           const Expression& expr) {
+  bool VisitIfThen(const Expression& condition,
+                           const Expression& expr) override {
     return condition.Accept(*this) && expr.Accept(*this);
   }
-  virtual bool VisitIfThenElse(const Expression& condition,
+  bool VisitIfThenElse(const Expression& condition,
                                const Expression& then_expr,
-                               const Expression& else_expr) {
+                               const Expression& else_expr) override {
     return condition.Accept(*this) && then_expr.Accept(*this) &&
            else_expr.Accept(*this);
   }
-  virtual bool VisitWhile(const Expression& condition, const Expression& body) {
+  bool VisitWhile(const Expression& condition, const Expression& body) override {
     return condition.Accept(*this) && body.Accept(*this);
   }
-  virtual bool VisitFor(const std::string& id, const Expression& first,
-                        const Expression& last, const Expression& body) {
+  bool VisitFor(const std::string& id, const Expression& first,
+                        const Expression& last, const Expression& body) override {
     return first.Accept(*this) && last.Accept(*this) && body.Accept(*this);
   }
-  virtual bool VisitBreak() { return true; }
-  virtual bool
+  bool VisitBreak() override { return true; }
+  bool
   VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
-           const std::vector<std::shared_ptr<Expression>>& body) {
+           const std::vector<std::shared_ptr<Expression>>& body) override {
     return std::all_of(body.begin(), body.end(),
                        [this](const auto& arg) { return arg->Accept(*this); });
   }

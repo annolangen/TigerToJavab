@@ -89,8 +89,8 @@ struct CodeAttribute : AttributeInfo {
     for (const auto& a : attributes) a->Emit(os);
     return os.str();
   }
-  virtual Tag tag() const override { return AttributeInfo::kCode; }
-  virtual std::optional<CodeAttribute*> code() override { return this; }
+  Tag tag() const override { return AttributeInfo::kCode; }
+  std::optional<CodeAttribute*> code() override { return this; }
 };
 
 // https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.6
@@ -247,8 +247,8 @@ std::optional<const char*> LibraryFunctionType(std::string_view name) {
 }
 
 struct JvmProgram : Program {
-  JvmProgram() {}
-  ~JvmProgram() = default;
+  JvmProgram() = default;
+  ~JvmProgram() override = default;
 
   const Pushable* DefineStringConstant(std::string_view text) override {
     return stringConstant(text);
