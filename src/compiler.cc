@@ -36,6 +36,9 @@ public:
   virtual bool
   VisitFunctionCall(const std::string& id,
                     const std::vector<std::shared_ptr<Expression>>& args) {
+
+    for (const auto& a: args) a->Accept(*this);
+                
     if (id == "print") {
       // hard coding for now to get something, eventually be an unordered set of
       // the stdlib functions
@@ -47,8 +50,7 @@ public:
         f->Invoke(os);
       }
     }
-    return std::all_of(args.begin(), args.end(),
-                       [this](const auto& arg) { return arg->Accept(*this); });
+    return true;
   }
   virtual bool
   VisitBlock(const std::vector<std::shared_ptr<Expression>>& exprs) {
