@@ -1,6 +1,7 @@
 #include "compiler.h"
 #include "emit.h"
 #include "instruction.h"
+#include <assert.h>
 #include <fstream>
 #include <vector>
 
@@ -35,15 +36,18 @@ public:
   }
   virtual bool
   VisitFunctionCall(const std::string& id,
-                    const std::vector<std::shared_ptr<Expression>>& args) {
+                    const std::vector<std::shared_ptr<Expression>>& args) { 
+                      //save the size of pushables for later - will make argument counting easier.
+    for (const auto& a : args) a->Accept(*this);
 
-    for (const auto& a: args) a->Accept(*this);
-                
     if (id == "print") {
       // hard coding for now to get something, eventually be an unordered set of
       // the stdlib functions
       if (auto f = program_.LookupLibraryFunction(id); f) {
+        assert(!instruction_streams_.empty());
+        assert(!pushables_.empty());
         auto& os = **instruction_streams_.rbegin();
+
         const Pushable* arg = *pushables_.rbegin();
         pushables_.pop_back();
         arg->Push(os);
