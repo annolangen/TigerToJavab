@@ -1,6 +1,8 @@
 #pragma once
 #include "BinaryOp.h"
 #include "DeclarationVisitor.h"
+#include "NameSpace.h"
+#include "SyntaxTreeVisitor.h"
 #include "TypeVisitor.h"
 #include <algorithm>
 #include <memory>
@@ -43,9 +45,22 @@ public:
   Declaration(std::string_view id) : id_(id) {}
   virtual ~Declaration() = default;
   virtual bool Accept(DeclarationVisitor& visitor) const = 0;
+  virtual bool Accept(SyntaxTreeVisitor& visitor) { return true; };
   // Returns the type of a type declaration
   virtual std::optional<const Type*> GetType() const { return {}; }
+
+  // Returns type of bound variable, parameter, or function return value.
+  virtual std::optional<const std::string*> GetValueType() const { return {}; }
+
+  // Return special name space including parameters, if the declaration is a
+  // function declaration.
+  virtual std::optional<const NameSpace*> GetFunctionNameSpace() const {
+    return {};
+  }
+
   const std::string& Id() const { return id_; }
+  virtual void SetNameSpaces(const NameSpace& types,
+                             const NameSpace& non_types) {}
 
 private:
   std::string id_;
@@ -59,6 +74,28 @@ class Expression {
 public:
   virtual ~Expression() = default;
   virtual bool Accept(ExpressionVisitor& visitor) const = 0;
+
+  // Calls VisitNode on all children.
+  virtual bool Accept(SyntaxTreeVisitor& visitor) { return true; }
+  virtual void SetNameSpaces(const NameSpace& types,
+                             const NameSpace& non_types);
+  // Returns type of this expression. Undefined behavior until SetTypesBelow has
+  // been called on the root.
+  const std::string& GetType() const { return *type_; }
+
+  // Sets type and non_types name spaces for every expression in the tree with
+  // the given root.
+  static void SetNameSpacesBelow(Expression& root);
+
+  // Sets types in every expression in the tree with the given
+  // root. Undefined behavior until SetNameSpacesBelow has been
+  // called.
+  static void SetTypesBelow(Expression& root);
+
+protected:
+  const NameSpace* types_ = nullptr;
+  const NameSpace* non_types_ = nullptr;
+  mutable const std::string* type_ = nullptr;
 };
 
 struct FieldValue {

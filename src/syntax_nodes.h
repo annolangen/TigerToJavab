@@ -87,10 +87,29 @@ public:
   bool Accept(DeclarationVisitor& visitor) const override {
     return visitor.VisitVariableDeclaration(Id(), type_id_, *expr_);
   }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*expr_);
+  }
+  std::optional<const std::string*> GetValueType() const override {
+    return type_id_ ? &*type_id_ : &expr_->GetType();
+  }
 
 private:
   std::optional<std::string> type_id_;
   std::unique_ptr<Expression> expr_;
+};
+
+class ParamDeclaration : public Declaration {
+public:
+  ParamDeclaration(std::string_view id, const std::string& type_id)
+      : Declaration(id), type_id_(type_id) {}
+  bool Accept(DeclarationVisitor& visitor) const override { return true; }
+  std::optional<const std::string*> GetValueType() const override {
+    return &type_id_;
+  }
+
+private:
+  const std::string& type_id_;
 };
 
 class FunctionDeclaration : public Declaration {
@@ -105,11 +124,32 @@ public:
   bool Accept(DeclarationVisitor& visitor) const override {
     return visitor.VisitFunctionDeclaration(Id(), params_, type_id_, *body_);
   }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*body_);
+  }
+  void SetNameSpaces(const NameSpace& types,
+                     const NameSpace& non_types) override {
+    name_space_.reset(new NameSpace(non_types));
+    for (const auto& p : params_) {
+      param_decls_.emplace_back(p.id, p.type_id);
+      (*name_space_)[p.id] = &*param_decls_.rbegin();
+    }
+    body_->SetNameSpaces(types, *name_space_);
+  }
+
+  std::optional<const NameSpace*> GetFunctionNameSpace() const override {
+    return name_space_.get();
+  }
+  std::optional<const std::string*> GetValueType() const override {
+    return type_id_ ? &*type_id_ : &body_->GetType();
+  }
 
 private:
   std::vector<TypeField> params_;
   std::optional<std::string> type_id_;
   std::unique_ptr<Expression> body_;
+  std::unique_ptr<NameSpace> name_space_;
+  std::vector<ParamDeclaration> param_decls_;
 };
 
 class StringConstant : public Expression {
@@ -160,6 +200,10 @@ public:
   bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitField(*value_, id_);
   }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*value_);
+  }
+
   std::optional<std::string> GetField() const override { return id_; }
   std::optional<const LValue*> GetChild() const override {
     return value_.get();
@@ -176,6 +220,10 @@ public:
   bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitIndex(*value_, *expr_);
   }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*value_) && visitor.VisitNode(*expr_);
+  }
+
   std::optional<const Expression*> GetIndexValue() const override {
     return expr_.get();
   }
@@ -193,6 +241,9 @@ public:
   Negated(Expression* expr) : expr_(expr) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitNegated(*expr_);
+  }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*expr_);
   }
 
 private:
@@ -220,6 +271,9 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitAssignment(*value_, *expr_);
   }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*value_) && visitor.VisitNode(*expr_);
+  }
 
 private:
   std::shared_ptr<LValue> value_;
@@ -233,6 +287,12 @@ public:
       : id_(id), args_(std::move(args)) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitFunctionCall(id_, args_);
+  }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    for (const auto& a : args_) {
+      if (!visitor.VisitNode(*a)) return false;
+    }
+    return true;
   }
 
 private:
@@ -248,6 +308,12 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitBlock(exprs_);
   }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    for (const auto& e : exprs_) {
+      if (!visitor.VisitNode(*e)) return false;
+    }
+    return true;
+  }
 
 private:
   std::vector<std::shared_ptr<Expression>> exprs_;
@@ -260,6 +326,12 @@ public:
       : type_id_(type_id), field_values_(std::move(field_values)) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitRecord(type_id_, field_values_);
+  }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    for (const auto& f : field_values_) {
+      if (!visitor.VisitNode(*f.expr)) return false;
+    }
+    return true;
   }
 
 private:
@@ -275,6 +347,9 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitArray(type_id_, *size_, *value_);
   }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*size_) && visitor.VisitNode(*value_);
+  }
 
 private:
   std::string type_id_;
@@ -288,6 +363,9 @@ public:
       : condition_(condition), expr_(expr) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitIfThen(*condition_, *expr_);
+  }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*condition_) && visitor.VisitNode(*expr_);
   }
 
 private:
@@ -303,6 +381,10 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitIfThenElse(*condition_, *then_expr_, *else_expr_);
   }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*condition_) && visitor.VisitNode(*then_expr_) &&
+           visitor.VisitNode(*else_expr_);
+  }
 
 private:
   std::unique_ptr<Expression> condition_;
@@ -317,6 +399,9 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitWhile(*condition_, *body_);
   }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*condition_) && visitor.VisitNode(*body_);
+  }
 
 private:
   std::unique_ptr<Expression> condition_;
@@ -330,6 +415,10 @@ public:
       : id_(id), first_(first), last_(last), body_(body) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitFor(id_, *first_, *last_, *body_);
+  }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*first_) && visitor.VisitNode(*last_) &&
+           visitor.VisitNode(*body_);
   }
 
 private:
@@ -354,6 +443,15 @@ public:
       : declarations_(std::move(declarations)), body_(std::move(body)) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitLet(declarations_, body_);
+  }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    for (auto d : declarations_) {
+      if (!d->Accept(visitor)) return false;
+    }
+    for (auto e : body_) {
+      if (!visitor.VisitNode(*e)) return false;
+    }
+    return true;
   }
 
 private:
