@@ -77,8 +77,7 @@ public:
 
   // Calls VisitNode on all children.
   virtual bool Accept(SyntaxTreeVisitor& visitor) { return true; }
-  virtual void SetNameSpaces(const NameSpace& types,
-                             const NameSpace& non_types);
+
   // Returns type of this expression. Undefined behavior until SetTypesBelow has
   // been called on the root.
   const std::string& GetType() const { return *type_; }
@@ -93,6 +92,15 @@ public:
   static void SetTypesBelow(Expression& root);
 
 protected:
+  // Sets name spaces in this expression and its children. Default
+  // implementation sets the given name spaces and nodes that establish new
+  // scopes override to set different ones.
+  virtual void SetNameSpaces(const NameSpace& types,
+                             const NameSpace& non_types);
+  friend class FunctionDeclaration;
+  friend class Let;
+  friend class TreeNameSpaceSetter;
+
   const NameSpace* types_ = nullptr;
   const NameSpace* non_types_ = nullptr;
   mutable const std::string* type_ = nullptr;

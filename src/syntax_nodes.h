@@ -454,7 +454,22 @@ public:
     return true;
   }
 
+protected:
+  void SetNameSpaces(const NameSpace& types,
+                     const NameSpace& non_types) override {
+    types_ = &types;
+    non_types_ = &non_types;
+    my_types_.reset(new NameSpace(types));
+    my_non_types_.reset(new NameSpace(non_types));
+    for (const auto& d : declarations_) {
+      (d->GetType() ? *my_types_ : *my_non_types_)[d->Id()] = d.get();
+    }
+    for (auto e : body_) e->SetNameSpaces(*my_types_, *my_non_types_);
+  }
+
 private:
   std::vector<std::shared_ptr<Declaration>> declarations_;
   std::vector<std::shared_ptr<Expression>> body_;
+  std::unique_ptr<NameSpace> my_types_;
+  std::unique_ptr<NameSpace> my_non_types_;
 };

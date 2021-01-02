@@ -28,16 +28,17 @@ public:
     return value.Accept(*this);
   }
   bool VisitBinary(const Expression& left, BinaryOp op,
-                           const Expression& right) override {
+                   const Expression& right) override {
     return left.Accept(*this) && right.Accept(*this);
   }
   bool VisitAssignment(const LValue& value, const Expression& expr) override {
     return expr.Accept(*this);
   }
-  bool
-  VisitFunctionCall(const std::string& id,
-                    const std::vector<std::shared_ptr<Expression>>& args) override { 
-                      //save the size of pushables for later - will make argument counting easier.
+  bool VisitFunctionCall(
+      const std::string& id,
+      const std::vector<std::shared_ptr<Expression>>& args) override {
+    // save the size of pushables for later - will make argument counting
+    // easier.
     for (const auto& a : args) a->Accept(*this);
 
     if (id == "print") {
@@ -62,34 +63,33 @@ public:
                        [this](const auto& arg) { return arg->Accept(*this); });
   }
   bool VisitRecord(const std::string& type_id,
-                           const std::vector<FieldValue>& field_values) override {
+                   const std::vector<FieldValue>& field_values) override {
     return true;
   }
   bool VisitArray(const std::string& type_id, const Expression& size,
-                          const Expression& value) override {
+                  const Expression& value) override {
     return size.Accept(*this) && value.Accept(*this);
   }
   bool VisitIfThen(const Expression& condition,
-                           const Expression& expr) override {
+                   const Expression& expr) override {
     return condition.Accept(*this) && expr.Accept(*this);
   }
-  bool VisitIfThenElse(const Expression& condition,
-                               const Expression& then_expr,
-                               const Expression& else_expr) override {
+  bool VisitIfThenElse(const Expression& condition, const Expression& then_expr,
+                       const Expression& else_expr) override {
     return condition.Accept(*this) && then_expr.Accept(*this) &&
            else_expr.Accept(*this);
   }
-  bool VisitWhile(const Expression& condition, const Expression& body) override {
+  bool VisitWhile(const Expression& condition,
+                  const Expression& body) override {
     return condition.Accept(*this) && body.Accept(*this);
   }
   bool VisitFor(const std::string& id, const Expression& first,
-                        const Expression& last, const Expression& body) override {
+                const Expression& last, const Expression& body) override {
     return first.Accept(*this) && last.Accept(*this) && body.Accept(*this);
   }
   bool VisitBreak() override { return true; }
-  bool
-  VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
-           const std::vector<std::shared_ptr<Expression>>& body) override {
+  bool VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
+                const std::vector<std::shared_ptr<Expression>>& body) override {
     return std::all_of(body.begin(), body.end(),
                        [this](const auto& arg) { return arg->Accept(*this); });
   }

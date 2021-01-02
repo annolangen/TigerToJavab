@@ -1,15 +1,5 @@
 #include "syntax_nodes.h"
 namespace {
-struct TreeNameSpaceSetter : SyntaxTreeVisitor {
-  TreeNameSpaceSetter(const NameSpace& types, const NameSpace& non_types)
-      : types_(types), non_types_(non_types) {}
-  const NameSpace& types_;
-  const NameSpace& non_types_;
-  bool VisitNode(Expression& child) override {
-    child.SetNameSpaces(types_, non_types_);
-    return true;
-  }
-};
 
 NameSpace kBuiltInTypes;
 Declaration* kTypeDecls[2] = {new TypeDeclaration("int", new IntType()),
@@ -31,6 +21,17 @@ void AddFun(std::string_view id, std::vector<TypeField> params,
                                   new BuiltInBody()));
 }
 } // namespace
+struct TreeNameSpaceSetter : SyntaxTreeVisitor {
+  TreeNameSpaceSetter(const NameSpace& types, const NameSpace& non_types)
+      : types_(types), non_types_(non_types) {}
+  const NameSpace& types_;
+  const NameSpace& non_types_;
+  bool VisitNode(Expression& child) override {
+    child.SetNameSpaces(types_, non_types_);
+    return true;
+  }
+};
+
 void Expression::SetNameSpaces(const NameSpace& types,
                                const NameSpace& non_types) {
   types_ = &types;
