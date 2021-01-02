@@ -1,12 +1,23 @@
-#include "types.h"
 #include "syntax_nodes.h"
 #include "testing/catch.h"
 #include "testing/testing.h"
 namespace {
 using testing::Parse;
-using types::InferType;
 
-#define HasType(text, type) REQUIRE(InferType(*Parse(text)) == (type))
+std::string InferTypeFromParse(const char* text) {
+  std::shared_ptr<Expression> e = Parse(text);
+  Expression::SetNameSpacesBelow(*e);
+  Expression::SetTypesBelow(*e);
+  return e->GetType();
+}
+
+const std::string& InferType(Expression& e) {
+  Expression::SetNameSpacesBelow(e);
+  Expression::SetTypesBelow(e);
+  return e.GetType();
+}
+
+#define HasType(text, type) REQUIRE(InferTypeFromParse(text) == (type))
 
 SCENARIO("types functions", "[types]") {
   GIVEN("Leaf expressions") {
@@ -14,8 +25,6 @@ SCENARIO("types functions", "[types]") {
     REQUIRE(InferType(*anInt()) == "int");
     auto aString = []() { return new StringConstant("Hello"); };
     REQUIRE(InferType(*aString()) == "string");
-    auto aNil = std::make_shared<Nil>();
-    REQUIRE(InferType(*aNil) == "none");
     auto aBreak = std::make_shared<Break>();
     REQUIRE(InferType(*aBreak) == "none");
     auto anArray = std::make_shared<Array>("IntArray", anInt(), anInt());
@@ -27,19 +36,6 @@ SCENARIO("types functions", "[types]") {
         {"weight", std::move(std::make_unique<IntegerConstant>(200))});
     auto aRecord = std::make_shared<Record>("Bulk", std::move(field_values));
     REQUIRE(InferType(*aRecord) == "Bulk");
-    WHEN("composed") {
-      REQUIRE(InferType(Negated(anInt())) == "int");
-      REQUIRE(InferType(Binary(anInt(), BinaryOp::kTimes, anInt())) == "int");
-      REQUIRE(InferType(Binary(aString(), BinaryOp::kPlus, aString())) ==
-              "string");
-      REQUIRE(InferType(IfThen(anInt(), aString())) == "none");
-      REQUIRE(InferType(IfThenElse(anInt(), aString(), aString())) == "string");
-      //      REQUIRE(InferType(Block({anInt(), aString()})) == "string");
-      //      REQUIRE(InferType(Block({aString(), anInt()})) == "int");
-      REQUIRE(InferType(While(anInt(), aString())) == "none");
-      REQUIRE(InferType(For("i", anInt(), anInt(), aString())) == "none");
-      REQUIRE(InferType(Let({}, {})) == "none");
-    }
     GIVEN("Declarations") {
       std::vector<std::shared_ptr<Declaration>> declarations;
       declarations.push_back(
@@ -54,13 +50,13 @@ SCENARIO("types functions", "[types]") {
         std::vector<std::shared_ptr<Expression>> body;
         body.push_back(std::make_unique<IdLValue>("n"));
         Let let(std::move(declarations), std::move(body));
-        REQUIRE(InferType(let) == "int");
+        //        REQUIRE(InferType(let) == "int");
       }
     }
     GIVEN("Parsed test") {
       HasType("3", "int");
       HasType("\"Hello\"", "string");
-      HasType("nil", "none");
+      //      HasType("nil", "none");
       HasType("break", "none");
       HasType("IntArray [3] of 0", "IntArray");
       HasType("Bulk {height=6, weight=200}", "Bulk");
@@ -71,12 +67,19 @@ SCENARIO("types functions", "[types]") {
       HasType("if 1 then \"you\" else \"world\"", "string");
       HasType("while 1 do \"hello\"", "none");
       HasType("for i := 1 to 3 do 6", "none");
+      HasType("let var a : int := 3 in a end", "int");
       HasType("let var a := 3 in 3 + a end", "int");
     }
     GIVEN("Complex case") {
       HasType("let type T = int in let type T = string var a : T := \"Hello\" "
               "in a end end",
               "T");
+      HasType("a", "???");
+
+      HasType("let function f():int = g() function g():int = f() in f() end",
+              "int");
+      HasType("let function f() = g() function g() = f() in f() end", "int");
+      FAIL("test");
     }
 
     // Composite expressions

@@ -24,10 +24,10 @@ public:
   bool Accept(TypeVisitor& visitor) const override {
     return visitor.VisitRecordType(fields_);
   }
-  std::optional<std::string_view>
+  std::optional<const std::string*>
   GetFieldType(const std::string& field_id) const override {
     for (const auto& f : fields_) {
-      if (f.id == field_id) return f.type_id;
+      if (f.id == field_id) return &f.type_id;
     }
     return {};
   }
@@ -42,8 +42,8 @@ public:
   bool Accept(TypeVisitor& visitor) const override {
     return visitor.VisitArrayType(type_id_);
   }
-  std::optional<std::string_view> GetElementType() const override {
-    return type_id_;
+  std::optional<const std::string*> GetElementType() const override {
+    return &type_id_;
   }
 
 private:
@@ -256,6 +256,9 @@ public:
       : left_(left), op_(op), right_(right) {}
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitBinary(*left_, op_, *right_);
+  }
+  bool Accept(SyntaxTreeVisitor& visitor) override {
+    return visitor.VisitNode(*left_) && visitor.VisitNode(*right_);
   }
 
 private:

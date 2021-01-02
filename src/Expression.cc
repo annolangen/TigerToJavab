@@ -1,4 +1,6 @@
+#include "ToString.h"
 #include "syntax_nodes.h"
+#include <iostream>
 namespace {
 
 NameSpace kBuiltInTypes;
@@ -21,12 +23,32 @@ void AddFun(std::string_view id, std::vector<TypeField> params,
                                   new BuiltInBody()));
 }
 
+// Type of expressions that lack a value, e.g. the `break` expression.
 std::string kNoneType = "none";
+// Marker value when type of expression could not be inferred, e.g. undefined
+// variable reference.
+std::string kUnknownType = "???";
+
+std::string kUnsetType = "unset";
+
+} // namespace
+struct TreeNameSpaceSetter : SyntaxTreeVisitor {
+  TreeNameSpaceSetter(const NameSpace& types, const NameSpace& non_types)
+      : types_(types), non_types_(non_types) {}
+  const NameSpace& types_;
+  const NameSpace& non_types_;
+  bool VisitNode(Expression& child) override {
+    child.SetNameSpaces(types_, non_types_);
+    return true;
+  }
+};
 
 // Sets inferred_type for all nodex with values, except for Nil. Nil requires a
 // separate visitor. This is used in combination with a SyntaxTreeVisitor, which
 // should ensure that types of all child expression have already been set.
+// Refrains from type checking.
 struct TypeSetter : public ExpressionVisitor, LValueVisitor {
+  TypeSetter(const Expression& expr) : expr_(expr) {}
   virtual bool VisitStringConstant(const std::string& text) {
     return SetType(kTypeDecls[1]->Id());
   }
@@ -46,78 +68,92 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     return SetType(right.GetType());
   }
   virtual bool VisitAssignment(const LValue& value, const Expression& expr) {
-    return SetType(expr.GetType());
+    return SetType(kNoneType);
   }
   virtual bool
   VisitFunctionCall(const std::string& id,
                     const std::vector<std::shared_ptr<Expression>>& args) {
-    return std::all_of(args.begin(), args.end(),
-                       [this](const auto& arg) { return arg->Accept(*this); });
+    if (auto d = expr_.non_types_->Lookup(id); d) {
+      if (auto vt = (*d)->GetValueType(); vt) {
+        return SetType(**vt);
+      }
+    }
+    return SetType(kUnknownType);
   }
   virtual bool
   VisitBlock(const std::vector<std::shared_ptr<Expression>>& exprs) {
-    return std::all_of(exprs.begin(), exprs.end(),
-                       [this](const auto& arg) { return arg->Accept(*this); });
+    return SetType(exprs.empty() ? kNoneType : (*exprs.rbegin())->GetType());
   }
   virtual bool VisitRecord(const std::string& type_id,
                            const std::vector<FieldValue>& field_values) {
-    return true;
+    return SetType(type_id);
   }
   virtual bool VisitArray(const std::string& type_id, const Expression& size,
                           const Expression& value) {
-    return size.Accept(*this) && value.Accept(*this);
+    return SetType(type_id);
   }
   virtual bool VisitIfThen(const Expression& condition,
                            const Expression& expr) {
-    return condition.Accept(*this) && expr.Accept(*this);
+    return SetType(kNoneType);
   }
   virtual bool VisitIfThenElse(const Expression& condition,
                                const Expression& then_expr,
                                const Expression& else_expr) {
-    return condition.Accept(*this) && then_expr.Accept(*this) &&
-           else_expr.Accept(*this);
+    return SetType(then_expr.GetType());
   }
   virtual bool VisitWhile(const Expression& condition, const Expression& body) {
-    return condition.Accept(*this) && body.Accept(*this);
+    return SetType(kNoneType);
   }
   virtual bool VisitFor(const std::string& id, const Expression& first,
                         const Expression& last, const Expression& body) {
-    return first.Accept(*this) && last.Accept(*this) && body.Accept(*this);
+    return SetType(kNoneType);
   }
-  virtual bool VisitBreak() { return true; }
+  virtual bool VisitBreak() { return SetType(kNoneType); }
   virtual bool
   VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
            const std::vector<std::shared_ptr<Expression>>& body) {
-    return std::all_of(body.begin(), body.end(),
-                       [this](const auto& arg) { return arg->Accept(*this); });
+    return SetType(body.empty() ? kNoneType : (*body.rbegin())->GetType());
   }
   virtual bool VisitId(const std::string& id) {
-    if (auto found = expr.non_types_->Lookup(id); found) {
+    if (auto found = expr_.non_types_->Lookup(id); found) {
+      std::cout << "found " << id << std::endl;
       return SetType(**(*found)->GetValueType());
     }
-    return false;
+    std::cout << "not found " << id << " in " << *expr_.non_types_ << std::endl;
+    return SetType(kUnknownType);
   }
   virtual bool VisitField(const LValue& value, const std::string& id) {
-    return false;
+    if (auto d = expr_.types_->Lookup(value.GetType()); d) {
+      if (auto type = (*d)->GetType(); type) {
+        if (auto field_type = (*type)->GetFieldType(id); field_type) {
+          return SetType(**field_type);
+        }
+      }
+    }
+    return SetType(kUnknownType);
   }
   virtual bool VisitIndex(const LValue& value, const Expression& expr) {
-    return false;
+    if (auto d = expr_.types_->Lookup(value.GetType()); d) {
+      if (auto type = (*d)->GetType(); type) {
+        if (auto element_type = (*type)->GetElementType(); element_type) {
+          return SetType(**element_type);
+        }
+      }
+    }
+    return SetType(kUnknownType);
   }
   bool SetType(const std::string& type) {
-    inferred_type = &type;
+    expr_.type_ = &type;
     return false;
   }
-  const std::string* inferred_type = &kNoneType;
-  const Expression& expr;
+  const Expression& expr_;
 };
-} // namespace
-struct TreeNameSpaceSetter : SyntaxTreeVisitor {
-  TreeNameSpaceSetter(const NameSpace& types, const NameSpace& non_types)
-      : types_(types), non_types_(non_types) {}
-  const NameSpace& types_;
-  const NameSpace& non_types_;
-  bool VisitNode(Expression& child) override {
-    child.SetNameSpaces(types_, non_types_);
+
+struct TreeTypeSetter : SyntaxTreeVisitor {
+  virtual bool VisitNode(Expression& e) {
+    TypeSetter setter(e);
+    e.Accept(setter);
+    std::cout << "Set type on children of " << e << std::endl;
     return true;
   }
 };
@@ -146,4 +182,11 @@ void Expression::SetNameSpacesBelow(Expression& root) {
   root.SetNameSpaces(kBuiltInTypes, kBuiltInFunctions);
 }
 
-void SetTypesBelow(Expression& root) {}
+void Expression::SetTypesBelow(Expression& root) {
+  TreeTypeSetter children_setter;
+  root.Accept(children_setter);
+  TypeSetter root_setter(root);
+  root.Accept(root_setter);
+}
+
+Expression::Expression() : type_(&kUnsetType) {}

@@ -28,7 +28,7 @@ public:
   // Returns true if the given key is bound in the current scope,
   bool IsBound(const std::string& key) { return scope_.count(key) > 0; }
 
-  std::ostream& AppendString(std::ostream& os) {
+  std::ostream& AppendString(std::ostream& os) const {
     os << "{";
     const char* sep = "";
     for (const NameSpace* i = this; i != nullptr; i = i->next_) {
@@ -44,3 +44,7 @@ private:
   const NameSpace* next_ = nullptr;
   std::unordered_map<std::string, D> scope_;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const NameSpace& name_space) {
+  return name_space.AppendString(os);
+}

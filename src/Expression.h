@@ -30,10 +30,12 @@ public:
   virtual bool Accept(TypeVisitor& visitor) const = 0;
 
   // Returns element type ID for an array type.
-  virtual std::optional<std::string_view> GetElementType() const { return {}; }
+  virtual std::optional<const std::string*> GetElementType() const {
+    return {};
+  }
 
   // Returns type ID for an field for a record type.
-  virtual std::optional<std::string_view>
+  virtual std::optional<const std::string*>
   GetFieldType(const std::string& field_id) const {
     return {};
   }
@@ -72,6 +74,7 @@ class ExpressionVisitor;
 // Base class for Expression nodes.
 class Expression {
 public:
+  Expression();
   virtual ~Expression() = default;
   virtual bool Accept(ExpressionVisitor& visitor) const = 0;
 
@@ -90,9 +93,6 @@ public:
   // root. Undefined behavior until SetNameSpacesBelow has been
   // called.
   static void SetTypesBelow(Expression& root);
-  // TODO restrict
-  const NameSpace* types_ = nullptr;
-  const NameSpace* non_types_ = nullptr;
 
 protected:
   // Sets name spaces in this expression and its children. Default
@@ -103,7 +103,10 @@ protected:
   friend class FunctionDeclaration;
   friend class Let;
   friend class TreeNameSpaceSetter;
+  const NameSpace* types_ = nullptr;
+  const NameSpace* non_types_ = nullptr;
 
+  friend class TypeSetter;
   mutable const std::string* type_ = nullptr;
 };
 
