@@ -1,3 +1,4 @@
+#include "DebugString.h"
 #include "ToString.h"
 #include "syntax_nodes.h"
 #include <iostream>
@@ -58,7 +59,8 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
   // Nil requires a more complex traversal
   virtual bool VisitNil() { return false; }
   virtual bool VisitLValue(const LValue& value) {
-    return SetType(value.GetType());
+    value.Accept(*(LValueVisitor*)this);
+    return false;
   }
   virtual bool VisitNegated(const Expression& value) {
     return SetType(value.GetType());
@@ -187,6 +189,7 @@ void Expression::SetTypesBelow(Expression& root) {
   root.Accept(children_setter);
   TypeSetter root_setter(root);
   root.Accept(root_setter);
+  std::cout << DebugString(root) << std::endl;
 }
 
 Expression::Expression() : type_(&kUnsetType) {}
