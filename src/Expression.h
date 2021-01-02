@@ -90,6 +90,9 @@ public:
   // root. Undefined behavior until SetNameSpacesBelow has been
   // called.
   static void SetTypesBelow(Expression& root);
+  // TODO restrict
+  const NameSpace* types_ = nullptr;
+  const NameSpace* non_types_ = nullptr;
 
 protected:
   // Sets name spaces in this expression and its children. Default
@@ -101,8 +104,6 @@ protected:
   friend class Let;
   friend class TreeNameSpaceSetter;
 
-  const NameSpace* types_ = nullptr;
-  const NameSpace* non_types_ = nullptr;
   mutable const std::string* type_ = nullptr;
 };
 
