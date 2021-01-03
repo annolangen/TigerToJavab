@@ -56,7 +56,6 @@ SCENARIO("types functions", "[types]") {
     GIVEN("Parsed test") {
       HasType("3", "int");
       HasType("\"Hello\"", "string");
-      //      HasType("nil", "none");
       HasType("break", "none");
       HasType("IntArray [3] of 0", "IntArray");
       HasType("Bulk {height=6, weight=200}", "Bulk");
@@ -78,6 +77,13 @@ SCENARIO("types functions", "[types]") {
       HasType("let function f():int = g() function g():int = f() in f() end",
               "int");
       HasType("let function f() = g() function g() = f() in f() end", "unset");
+      HasType("nil", "unset");
+      HasType("let type Bulk = {height:int, weight:int}"
+              " var b := nil in b end",
+              "unset");
+      HasType("let type Bulk = {height:int, weight:int}"
+              " var b : Bulk := nil in b end",
+              "Bulk");
     }
 
     // Composite expressions

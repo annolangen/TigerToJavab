@@ -1,4 +1,5 @@
 #include "DebugString.h"
+#include "StoppingExpressionVisitor.h"
 #include "ToString.h"
 #include "syntax_nodes.h"
 #include <iostream>
@@ -48,6 +49,21 @@ bool IsRecordType(const Type& type) {
   return classifier.is_record_type;
 }
 
+struct NilTypeClassifier : public StoppingExpressionVisitor {
+public:
+  virtual bool VisitNil() {
+    is_nil = true;
+    return false;
+  }
+  bool is_nil = false;
+};
+
+bool IsNil(const Expression& e) {
+  NilTypeClassifier classifier;
+  e.Accept(classifier);
+  return classifier.is_nil;
+}
+
 } // namespace
 
 // TODO deal with Nil!
@@ -77,7 +93,8 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     return SetType(right.GetType());
   }
   bool VisitAssignment(const LValue& value, const Expression& expr) override {
-    if (auto r = RecordType(value); r) {
+    if (auto r = RecordType(value); r && IsNil(expr)) {
+      expr.type_ = *r;
     }
     return SetType(kNoneType);
   }
