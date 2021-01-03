@@ -13,7 +13,7 @@ void AddDecl(const FunctionDeclaration* f) { kBuiltInFunctions[f->Id()] = f; }
 
 class BuiltInBody : public Expression {
 public:
-  bool Accept(ExpressionVisitor&) const { return true; }
+  bool Accept(ExpressionVisitor&) const override { return true; }
 };
 void AddProc(std::string_view id, std::vector<TypeField> params) {
   AddDecl(new FunctionDeclaration(id, std::move(params), new BuiltInBody()));
@@ -36,7 +36,7 @@ std::string kUnsetType = "unset";
 struct TreeNameSpaceSetter : SyntaxTreeVisitor {
   TreeNameSpaceSetter(const NameSpace& types, const NameSpace& non_types)
       : types_(&types), non_types_(&non_types) {}
-  bool BeforeChildren(Expression& parent) {
+  bool BeforeChildren(Expression& parent) override {
     if (auto s = parent.GetTypeNameSpace(*types_); s) {
       shadowed_name_spaces.push_back(types_);
       type_scope_expression.push_back(&parent);
@@ -49,7 +49,7 @@ struct TreeNameSpaceSetter : SyntaxTreeVisitor {
     }
     return true;
   }
-  bool BeforeChildren(Declaration& parent) {
+  bool BeforeChildren(Declaration& parent) override {
     if (auto s = parent.GetFunctionNameSpace(*non_types_); s) {
       shadowed_name_spaces.push_back(non_types_);
       scope_declaration.push_back(&parent);
@@ -63,7 +63,7 @@ struct TreeNameSpaceSetter : SyntaxTreeVisitor {
     std::cout << "TreeNameSpaceSetter " << DebugString(child) << std::endl;
     return true;
   }
-  bool AfterChildren(Expression& parent) {
+  bool AfterChildren(Expression& parent) override {
     if (!non_type_scope_expression.empty() &&
         *non_type_scope_expression.rbegin() == &parent) {
       non_type_scope_expression.pop_back();
@@ -78,7 +78,7 @@ struct TreeNameSpaceSetter : SyntaxTreeVisitor {
     }
     return true;
   }
-  bool AfterChildren(Declaration& parent) {
+  bool AfterChildren(Declaration& parent) override {
     if (!scope_declaration.empty() && *scope_declaration.rbegin() == &parent) {
       scope_declaration.pop_back();
       non_types_ = *shadowed_name_spaces.rbegin();
@@ -101,31 +101,31 @@ struct TreeNameSpaceSetter : SyntaxTreeVisitor {
 // Refrains from type checking.
 struct TypeSetter : public ExpressionVisitor, LValueVisitor {
   TypeSetter(const Expression& expr) : expr_(expr) {}
-  virtual bool VisitStringConstant(const std::string& text) {
+  bool VisitStringConstant(const std::string& text) override {
     return SetType(kTypeDecls[1]->Id());
   }
-  virtual bool VisitIntegerConstant(int value) {
+  bool VisitIntegerConstant(int value) override {
     return SetType(kTypeDecls[0]->Id());
   }
   // Nil requires a more complex traversal
-  virtual bool VisitNil() { return false; }
-  virtual bool VisitLValue(const LValue& value) {
+  bool VisitNil() override { return false; }
+  bool VisitLValue(const LValue& value) override {
     value.Accept(*(LValueVisitor*)this);
     return false;
   }
-  virtual bool VisitNegated(const Expression& value) {
+  bool VisitNegated(const Expression& value) override {
     return SetType(value.GetType());
   }
-  virtual bool VisitBinary(const Expression& left, BinaryOp op,
-                           const Expression& right) {
+  bool VisitBinary(const Expression& left, BinaryOp op,
+                           const Expression& right) override {
     return SetType(right.GetType());
   }
-  virtual bool VisitAssignment(const LValue& value, const Expression& expr) {
+  bool VisitAssignment(const LValue& value, const Expression& expr) override {
     return SetType(kNoneType);
   }
-  virtual bool
+  bool
   VisitFunctionCall(const std::string& id,
-                    const std::vector<std::shared_ptr<Expression>>& args) {
+                    const std::vector<std::shared_ptr<Expression>>& args) override {
     if (auto d = expr_.non_types_->Lookup(id); d) {
       if (auto vt = (*d)->GetValueType(); vt) {
         return SetType(**vt);
@@ -133,41 +133,41 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     }
     return SetType(kUnknownType);
   }
-  virtual bool
-  VisitBlock(const std::vector<std::shared_ptr<Expression>>& exprs) {
+  bool
+  VisitBlock(const std::vector<std::shared_ptr<Expression>>& exprs) override {
     return SetType(exprs.empty() ? kNoneType : (*exprs.rbegin())->GetType());
   }
-  virtual bool VisitRecord(const std::string& type_id,
-                           const std::vector<FieldValue>& field_values) {
+  bool VisitRecord(const std::string& type_id,
+                           const std::vector<FieldValue>& field_values) override {
     return SetType(type_id);
   }
-  virtual bool VisitArray(const std::string& type_id, const Expression& size,
-                          const Expression& value) {
+  bool VisitArray(const std::string& type_id, const Expression& size,
+                          const Expression& value) override {
     return SetType(type_id);
   }
-  virtual bool VisitIfThen(const Expression& condition,
-                           const Expression& expr) {
+  bool VisitIfThen(const Expression& condition,
+                           const Expression& expr) override {
     return SetType(kNoneType);
   }
-  virtual bool VisitIfThenElse(const Expression& condition,
+  bool VisitIfThenElse(const Expression& condition,
                                const Expression& then_expr,
-                               const Expression& else_expr) {
+                               const Expression& else_expr) override {
     return SetType(then_expr.GetType());
   }
-  virtual bool VisitWhile(const Expression& condition, const Expression& body) {
+  bool VisitWhile(const Expression& condition, const Expression& body) override {
     return SetType(kNoneType);
   }
-  virtual bool VisitFor(const std::string& id, const Expression& first,
-                        const Expression& last, const Expression& body) {
+  bool VisitFor(const std::string& id, const Expression& first,
+                        const Expression& last, const Expression& body) override {
     return SetType(kNoneType);
   }
-  virtual bool VisitBreak() { return SetType(kNoneType); }
-  virtual bool
+  bool VisitBreak() override { return SetType(kNoneType); }
+  bool
   VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
-           const std::vector<std::shared_ptr<Expression>>& body) {
+           const std::vector<std::shared_ptr<Expression>>& body) override {
     return SetType(body.empty() ? kNoneType : (*body.rbegin())->GetType());
   }
-  virtual bool VisitId(const std::string& id) {
+  bool VisitId(const std::string& id) override {
     if (auto found = expr_.non_types_->Lookup(id); found) {
       std::cout << "found " << id << std::endl;
       return SetType(**(*found)->GetValueType());
@@ -175,7 +175,7 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     std::cout << "not found " << id << " in " << *expr_.non_types_ << std::endl;
     return SetType(kUnknownType);
   }
-  virtual bool VisitField(const LValue& value, const std::string& id) {
+  bool VisitField(const LValue& value, const std::string& id) override {
     if (auto d = expr_.types_->Lookup(value.GetType()); d) {
       if (auto type = (*d)->GetType(); type) {
         if (auto field_type = (*type)->GetFieldType(id); field_type) {
@@ -185,7 +185,7 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     }
     return SetType(kUnknownType);
   }
-  virtual bool VisitIndex(const LValue& value, const Expression& expr) {
+  bool VisitIndex(const LValue& value, const Expression& expr) override {
     if (auto d = expr_.types_->Lookup(value.GetType()); d) {
       if (auto type = (*d)->GetType(); type) {
         if (auto element_type = (*type)->GetElementType(); element_type) {
@@ -203,8 +203,8 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
 };
 
 struct TreeTypeSetter : SyntaxTreeVisitor {
-  virtual bool VisitChild(Expression& child) { return SetType(child); }
-  virtual bool AfterChildren(Expression& parent) { return SetType(parent); }
+  bool VisitChild(Expression& child) override { return SetType(child); }
+  bool AfterChildren(Expression& parent) override { return SetType(parent); }
   static bool SetType(Expression& e) {
     TypeSetter setter(e);
     e.Accept(setter);

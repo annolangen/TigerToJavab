@@ -167,20 +167,20 @@ private:
 class AppendDeclarationVisitor : public DeclarationVisitor {
 public:
   AppendDeclarationVisitor(std::ostream& os) : os_(os) {}
-  virtual bool VisitTypeDeclaration(const std::string& id, const Type& type) {
+  bool VisitTypeDeclaration(const std::string& id, const Type& type) override {
     os_ << "type " << id << " = " << type;
     return true;
   }
-  virtual bool
+  bool
   VisitVariableDeclaration(const std::string& id,
                            const std::optional<std::string>& type_id,
-                           const Expression& expr) {
+                           const Expression& expr) override {
     os_ << "var " << id << (type_id ? ": " + *type_id : "") << " = " << expr;
     return true;
   }
-  virtual bool VisitFunctionDeclaration(
+  bool VisitFunctionDeclaration(
       const std::string& id, const std::vector<TypeField>& params,
-      const std::optional<std::string> type_id, const Expression& body) {
+      const std::optional<std::string> type_id, const Expression& body) override {
     os_ << "function " << id << (type_id ? ": " + *type_id : "") << " = "
         << body;
     return true;
