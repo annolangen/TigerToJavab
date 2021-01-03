@@ -163,6 +163,32 @@ public:
 private:
   std::ostream& os_;
 };
+
+class AppendDeclarationVisitor : public DeclarationVisitor {
+public:
+  AppendDeclarationVisitor(std::ostream& os) : os_(os) {}
+  virtual bool VisitTypeDeclaration(const std::string& id, const Type& type) {
+    os_ << "type " << id << " = " << type;
+    return true;
+  }
+  virtual bool
+  VisitVariableDeclaration(const std::string& id,
+                           const std::optional<std::string>& type_id,
+                           const Expression& expr) {
+    os_ << "var " << id << (type_id ? ": " + *type_id : "") << " = " << expr;
+    return true;
+  }
+  virtual bool VisitFunctionDeclaration(
+      const std::string& id, const std::vector<TypeField>& params,
+      const std::optional<std::string> type_id, const Expression& body) {
+    os_ << "function " << id << (type_id ? ": " + *type_id : "") << " = "
+        << body;
+    return true;
+  }
+
+private:
+  std::ostream& os_;
+};
 } // namespace
 
 std::ostream& operator<<(std::ostream& os, const Type& t) {
@@ -177,4 +203,8 @@ std::ostream& operator<<(std::ostream& os, const Expression& e) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Declaration& d) { return os; }
+std::ostream& operator<<(std::ostream& os, const Declaration& d) {
+  AppendDeclarationVisitor visitor(os);
+  d.Accept(visitor);
+  return os;
+}

@@ -48,6 +48,8 @@ public:
   virtual ~Declaration() = default;
   virtual bool Accept(DeclarationVisitor& visitor) const = 0;
   virtual bool Accept(SyntaxTreeVisitor& visitor) { return true; };
+  const std::string& Id() const { return id_; }
+
   // Returns the type of a type declaration
   virtual std::optional<const Type*> GetType() const { return {}; }
 
@@ -56,13 +58,10 @@ public:
 
   // Return special name space including parameters, if the declaration is a
   // function declaration.
-  virtual std::optional<const NameSpace*> GetFunctionNameSpace() const {
+  virtual std::optional<const NameSpace*>
+  GetFunctionNameSpace(const NameSpace& non_types) {
     return {};
   }
-
-  const std::string& Id() const { return id_; }
-  virtual void SetNameSpaces(const NameSpace& types,
-                             const NameSpace& non_types) {}
 
 private:
   std::string id_;
@@ -78,8 +77,22 @@ public:
   virtual ~Expression() = default;
   virtual bool Accept(ExpressionVisitor& visitor) const = 0;
 
-  // Calls VisitNode on all children.
-  virtual bool Accept(SyntaxTreeVisitor& visitor) { return true; }
+  // Calls VisitChild on all children.
+  virtual bool Accept(SyntaxTreeVisitor& visitor) {
+    return AcceptForChildren(visitor, std::vector<Expression*>());
+  }
+
+  // Returns new scope for a Let expression
+  virtual std::optional<const NameSpace*>
+  GetTypeNameSpace(const NameSpace& types) {
+    return {};
+  }
+
+  // Returns new scope for a Let expression
+  virtual std::optional<const NameSpace*>
+  GetNonTypeNameSpace(const NameSpace& non_types) {
+    return {};
+  }
 
   // Returns type of this expression. Undefined behavior until SetTypesBelow has
   // been called on the root.
@@ -95,11 +108,15 @@ public:
   static void SetTypesBelow(Expression& root);
 
 protected:
-  // Sets name spaces in this expression and its children. Default
-  // implementation sets the given name spaces and nodes that establish new
-  // scopes override to set different ones.
-  virtual void SetNameSpaces(const NameSpace& types,
-                             const NameSpace& non_types);
+  template <class R>
+  bool AcceptForChildren(SyntaxTreeVisitor& visitor, R children) {
+    return visitor.BeforeChildren(*this) &&
+           std::all_of(children.begin(), children.end(),
+                       [&visitor](auto& c) { return c->Accept(visitor); }) &&
+           visitor.AfterChildren(*this);
+  }
+
+  // TODO review these
   friend class FunctionDeclaration;
   friend class Let;
   friend class TreeNameSpaceSetter;

@@ -100,6 +100,20 @@ private:
   ExpressionVisitor& expression_visitor_;
 };
 
+template <class T>
+std::function<Appendable&(Appendable&)>
+ArrayString(const std::vector<std::shared_ptr<T>>& v) {
+  return [&v](Appendable& a) -> Appendable& {
+    const char* sep = "";
+    a << "[";
+    for (const auto& i : v) {
+      a << sep << ToString(*i);
+      sep = "\n";
+    }
+    return a << "]";
+  };
+}
+
 class AppendExpressionVisitor : public ExpressionVisitor {
 public:
   AppendExpressionVisitor(std::string& out) : out_(out) {}
@@ -183,8 +197,8 @@ public:
   bool VisitBreak() override { return true; }
   bool VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
                 const std::vector<std::shared_ptr<Expression>>& body) override {
-    return std::all_of(body.begin(), body.end(),
-                       [this](const auto& arg) { return arg->Accept(*this); });
+    return emit(out_) << "Let{declarations: " << ArrayString(declarations)
+                      << Join(" expr", body) << "}";
   }
   std::function<Appendable&(Appendable&)>
   Join(const char* key, const std::vector<std::shared_ptr<Expression>>& v) {
@@ -219,8 +233,9 @@ std::string& AppendDebugString(std::string& out, const Type& t) {
 std::string& AppendDebugString(std::string& out, const Expression& e) {
   AppendExpressionVisitor visitor(out);
   e.Accept(visitor);
+  out += " (" + e.GetType() + ") ";
   return out;
 }
 std::string& AppendDebugString(std::string& out, const Declaration& d) {
-  return out;
+  return out += ToString(d);
 }

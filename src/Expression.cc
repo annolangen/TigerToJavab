@@ -35,13 +35,64 @@ std::string kUnsetType = "unset";
 } // namespace
 struct TreeNameSpaceSetter : SyntaxTreeVisitor {
   TreeNameSpaceSetter(const NameSpace& types, const NameSpace& non_types)
-      : types_(types), non_types_(non_types) {}
-  const NameSpace& types_;
-  const NameSpace& non_types_;
-  bool VisitNode(Expression& child) override {
-    child.SetNameSpaces(types_, non_types_);
+      : types_(&types), non_types_(&non_types) {}
+  bool BeforeChildren(Expression& parent) {
+    if (auto s = parent.GetTypeNameSpace(*types_); s) {
+      shadowed_name_spaces.push_back(types_);
+      type_scope_expression.push_back(&parent);
+      types_ = *s;
+    }
+    if (auto s = parent.GetNonTypeNameSpace(*non_types_); s) {
+      shadowed_name_spaces.push_back(non_types_);
+      non_type_scope_expression.push_back(&parent);
+      non_types_ = *s;
+    }
     return true;
   }
+  bool BeforeChildren(Declaration& parent) {
+    if (auto s = parent.GetFunctionNameSpace(*non_types_); s) {
+      shadowed_name_spaces.push_back(non_types_);
+      scope_declaration.push_back(&parent);
+      non_types_ = *s;
+    }
+    return true;
+  }
+  bool VisitChild(Expression& child) override {
+    child.types_ = types_;
+    child.non_types_ = non_types_;
+    std::cout << "TreeNameSpaceSetter " << DebugString(child) << std::endl;
+    return true;
+  }
+  bool AfterChildren(Expression& parent) {
+    if (!non_type_scope_expression.empty() &&
+        *non_type_scope_expression.rbegin() == &parent) {
+      non_type_scope_expression.pop_back();
+      non_types_ = *shadowed_name_spaces.rbegin();
+      shadowed_name_spaces.pop_back();
+    }
+    if (!type_scope_expression.empty() &&
+        *type_scope_expression.rbegin() == &parent) {
+      type_scope_expression.pop_back();
+      types_ = *shadowed_name_spaces.rbegin();
+      shadowed_name_spaces.pop_back();
+    }
+    return true;
+  }
+  bool AfterChildren(Declaration& parent) {
+    if (!scope_declaration.empty() && *scope_declaration.rbegin() == &parent) {
+      scope_declaration.pop_back();
+      non_types_ = *shadowed_name_spaces.rbegin();
+      shadowed_name_spaces.pop_back();
+    }
+    return true;
+  }
+
+  const NameSpace* types_;
+  const NameSpace* non_types_;
+  std::vector<const NameSpace*> shadowed_name_spaces;
+  std::vector<const Expression*> type_scope_expression;
+  std::vector<const Expression*> non_type_scope_expression;
+  std::vector<const Declaration*> scope_declaration;
 };
 
 // Sets inferred_type for all nodex with values, except for Nil. Nil requires a
@@ -152,21 +203,15 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
 };
 
 struct TreeTypeSetter : SyntaxTreeVisitor {
-  virtual bool VisitNode(Expression& e) {
+  virtual bool VisitChild(Expression& child) { return SetType(child); }
+  virtual bool AfterChildren(Expression& parent) { return SetType(parent); }
+  static bool SetType(Expression& e) {
     TypeSetter setter(e);
     e.Accept(setter);
-    std::cout << "Set type on children of " << e << std::endl;
+    std::cout << "SetType " << DebugString(e) << std::endl;
     return true;
   }
 };
-
-void Expression::SetNameSpaces(const NameSpace& types,
-                               const NameSpace& non_types) {
-  types_ = &types;
-  non_types_ = &non_types;
-  TreeNameSpaceSetter visitor(types, non_types);
-  Accept(visitor);
-}
 
 void Expression::SetNameSpacesBelow(Expression& root) {
   for (auto* d : kTypeDecls) kBuiltInTypes[d->Id()] = d;
@@ -181,7 +226,8 @@ void Expression::SetNameSpacesBelow(Expression& root) {
   AddFun("concat", {{"s1", "string"}, {"s2", "string"}}, "string");
   AddFun("not", {{"i", "int"}}, "int");
   AddProc("exit", {{"i", "int"}});
-  root.SetNameSpaces(kBuiltInTypes, kBuiltInFunctions);
+  TreeNameSpaceSetter visitor(kBuiltInTypes, kBuiltInFunctions);
+  root.Accept(visitor);
 }
 
 void Expression::SetTypesBelow(Expression& root) {
@@ -189,7 +235,7 @@ void Expression::SetTypesBelow(Expression& root) {
   root.Accept(children_setter);
   TypeSetter root_setter(root);
   root.Accept(root_setter);
-  std::cout << DebugString(root) << std::endl;
+  std::cout << "SetTypesBelow " << DebugString(root) << std::endl;
 }
 
 Expression::Expression() : type_(&kUnsetType) {}
