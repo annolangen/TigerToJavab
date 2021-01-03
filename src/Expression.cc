@@ -33,67 +33,6 @@ std::string kUnknownType = "???";
 std::string kUnsetType = "unset";
 
 } // namespace
-struct TreeNameSpaceSetter : SyntaxTreeVisitor {
-  TreeNameSpaceSetter(const NameSpace& types, const NameSpace& non_types)
-      : types_(&types), non_types_(&non_types) {}
-  bool BeforeChildren(Expression& parent) override {
-    if (auto s = parent.GetTypeNameSpace(*types_); s) {
-      shadowed_name_spaces.push_back(types_);
-      type_scope_expression.push_back(&parent);
-      types_ = *s;
-    }
-    if (auto s = parent.GetNonTypeNameSpace(*non_types_); s) {
-      shadowed_name_spaces.push_back(non_types_);
-      non_type_scope_expression.push_back(&parent);
-      non_types_ = *s;
-    }
-    return true;
-  }
-  bool BeforeChildren(Declaration& parent) override {
-    if (auto s = parent.GetFunctionNameSpace(*non_types_); s) {
-      shadowed_name_spaces.push_back(non_types_);
-      scope_declaration.push_back(&parent);
-      non_types_ = *s;
-    }
-    return true;
-  }
-  bool VisitChild(Expression& child) override {
-    child.types_ = types_;
-    child.non_types_ = non_types_;
-    std::cout << "TreeNameSpaceSetter " << DebugString(child) << std::endl;
-    return true;
-  }
-  bool AfterChildren(Expression& parent) override {
-    if (!non_type_scope_expression.empty() &&
-        *non_type_scope_expression.rbegin() == &parent) {
-      non_type_scope_expression.pop_back();
-      non_types_ = *shadowed_name_spaces.rbegin();
-      shadowed_name_spaces.pop_back();
-    }
-    if (!type_scope_expression.empty() &&
-        *type_scope_expression.rbegin() == &parent) {
-      type_scope_expression.pop_back();
-      types_ = *shadowed_name_spaces.rbegin();
-      shadowed_name_spaces.pop_back();
-    }
-    return true;
-  }
-  bool AfterChildren(Declaration& parent) override {
-    if (!scope_declaration.empty() && *scope_declaration.rbegin() == &parent) {
-      scope_declaration.pop_back();
-      non_types_ = *shadowed_name_spaces.rbegin();
-      shadowed_name_spaces.pop_back();
-    }
-    return true;
-  }
-
-  const NameSpace* types_;
-  const NameSpace* non_types_;
-  std::vector<const NameSpace*> shadowed_name_spaces;
-  std::vector<const Expression*> type_scope_expression;
-  std::vector<const Expression*> non_type_scope_expression;
-  std::vector<const Declaration*> scope_declaration;
-};
 
 // Sets inferred_type for all nodex with values, except for Nil. Nil requires a
 // separate visitor. This is used in combination with a SyntaxTreeVisitor, which
@@ -117,15 +56,15 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     return SetType(value.GetType());
   }
   bool VisitBinary(const Expression& left, BinaryOp op,
-                           const Expression& right) override {
+                   const Expression& right) override {
     return SetType(right.GetType());
   }
   bool VisitAssignment(const LValue& value, const Expression& expr) override {
     return SetType(kNoneType);
   }
-  bool
-  VisitFunctionCall(const std::string& id,
-                    const std::vector<std::shared_ptr<Expression>>& args) override {
+  bool VisitFunctionCall(
+      const std::string& id,
+      const std::vector<std::shared_ptr<Expression>>& args) override {
     if (auto d = expr_.non_types_->Lookup(id); d) {
       if (auto vt = (*d)->GetValueType(); vt) {
         return SetType(**vt);
@@ -138,33 +77,32 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     return SetType(exprs.empty() ? kNoneType : (*exprs.rbegin())->GetType());
   }
   bool VisitRecord(const std::string& type_id,
-                           const std::vector<FieldValue>& field_values) override {
+                   const std::vector<FieldValue>& field_values) override {
     return SetType(type_id);
   }
   bool VisitArray(const std::string& type_id, const Expression& size,
-                          const Expression& value) override {
+                  const Expression& value) override {
     return SetType(type_id);
   }
   bool VisitIfThen(const Expression& condition,
-                           const Expression& expr) override {
+                   const Expression& expr) override {
     return SetType(kNoneType);
   }
-  bool VisitIfThenElse(const Expression& condition,
-                               const Expression& then_expr,
-                               const Expression& else_expr) override {
+  bool VisitIfThenElse(const Expression& condition, const Expression& then_expr,
+                       const Expression& else_expr) override {
     return SetType(then_expr.GetType());
   }
-  bool VisitWhile(const Expression& condition, const Expression& body) override {
+  bool VisitWhile(const Expression& condition,
+                  const Expression& body) override {
     return SetType(kNoneType);
   }
   bool VisitFor(const std::string& id, const Expression& first,
-                        const Expression& last, const Expression& body) override {
+                const Expression& last, const Expression& body) override {
     return SetType(kNoneType);
   }
   bool VisitBreak() override { return SetType(kNoneType); }
-  bool
-  VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
-           const std::vector<std::shared_ptr<Expression>>& body) override {
+  bool VisitLet(const std::vector<std::shared_ptr<Declaration>>& declarations,
+                const std::vector<std::shared_ptr<Expression>>& body) override {
     return SetType(body.empty() ? kNoneType : (*body.rbegin())->GetType());
   }
   bool VisitId(const std::string& id) override {
@@ -226,8 +164,7 @@ void Expression::SetNameSpacesBelow(Expression& root) {
   AddFun("concat", {{"s1", "string"}, {"s2", "string"}}, "string");
   AddFun("not", {{"i", "int"}}, "int");
   AddProc("exit", {{"i", "int"}});
-  TreeNameSpaceSetter visitor(kBuiltInTypes, kBuiltInFunctions);
-  root.Accept(visitor);
+  root.SetNameSpacesBelow(&kBuiltInTypes, &kBuiltInFunctions);
 }
 
 void Expression::SetTypesBelow(Expression& root) {

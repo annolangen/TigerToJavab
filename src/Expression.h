@@ -3,6 +3,7 @@
 #include "DeclarationVisitor.h"
 #include "NameSpace.h"
 #include "SyntaxTreeVisitor.h"
+#include "TreeNode.h"
 #include "TypeVisitor.h"
 #include <algorithm>
 #include <memory>
@@ -42,10 +43,12 @@ public:
 };
 
 // Abstract base class for Declaration nodes.
-class Declaration {
+class Declaration : public TreeNode {
 public:
   Declaration(std::string_view id) : id_(id) {}
   virtual ~Declaration() = default;
+  std::optional<Declaration*> declaration() override { return this; }
+
   virtual bool Accept(DeclarationVisitor& visitor) const = 0;
   virtual bool Accept(SyntaxTreeVisitor& visitor) { return true; };
   const std::string& Id() const { return id_; }
@@ -56,13 +59,6 @@ public:
   // Returns type of bound variable, parameter, or function return value.
   virtual std::optional<const std::string*> GetValueType() const { return {}; }
 
-  // Return special name space including parameters, if the declaration is a
-  // function declaration.
-  virtual std::optional<const NameSpace*>
-  GetFunctionNameSpace(const NameSpace& non_types) {
-    return {};
-  }
-
 private:
   std::string id_;
 };
@@ -71,27 +67,17 @@ private:
 class ExpressionVisitor;
 
 // Base class for Expression nodes.
-class Expression {
+class Expression : public TreeNode {
 public:
   Expression();
   virtual ~Expression() = default;
+  std::optional<Expression*> expression() override { return this; }
+
   virtual bool Accept(ExpressionVisitor& visitor) const = 0;
 
   // Calls VisitChild on all children.
   virtual bool Accept(SyntaxTreeVisitor& visitor) {
     return AcceptForChildren(visitor, std::vector<Expression*>());
-  }
-
-  // Returns new scope for a Let expression
-  virtual std::optional<const NameSpace*>
-  GetTypeNameSpace(const NameSpace& types) {
-    return {};
-  }
-
-  // Returns new scope for a Let expression
-  virtual std::optional<const NameSpace*>
-  GetNonTypeNameSpace(const NameSpace& non_types) {
-    return {};
   }
 
   // Returns type of this expression. Undefined behavior until SetTypesBelow has
@@ -108,6 +94,12 @@ public:
   static void SetTypesBelow(Expression& root);
 
 protected:
+  void SetNameSpacesBelow(const NameSpace* types, const NameSpace* non_types) {
+    types_ = types;
+    non_types_ = non_types;
+    TreeNode::SetNameSpacesBelow(types, non_types);
+  }
+
   template <class R>
   bool AcceptForChildren(SyntaxTreeVisitor& visitor, R children) {
     return visitor.BeforeChildren(*this) &&
@@ -116,10 +108,6 @@ protected:
            visitor.AfterChildren(*this);
   }
 
-  // TODO review these
-  friend class FunctionDeclaration;
-  friend class Let;
-  friend class TreeNameSpaceSetter;
   const NameSpace* types_ = nullptr;
   const NameSpace* non_types_ = nullptr;
 

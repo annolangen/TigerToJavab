@@ -132,7 +132,7 @@ public:
   }
 
   std::optional<const NameSpace*>
-  GetFunctionNameSpace(const NameSpace& non_types) override {
+  GetNonTypeNameSpace(const NameSpace& non_types) const override {
     if (!name_space_) {
       name_space_.reset(new NameSpace(non_types));
       for (const auto& p : params_) {
@@ -150,8 +150,8 @@ private:
   std::vector<TypeField> params_;
   std::optional<std::string> type_id_;
   std::unique_ptr<Expression> body_;
-  std::unique_ptr<NameSpace> name_space_;
-  std::vector<ParamDeclaration> param_decls_;
+  mutable std::unique_ptr<NameSpace> name_space_;
+  mutable std::vector<ParamDeclaration> param_decls_;
 };
 
 class StringConstant : public Expression {
@@ -474,7 +474,7 @@ public:
 
   // Returns new scope for a Let expression
   virtual std::optional<const NameSpace*>
-  GetNonTypeNameSpace(const NameSpace& non_types) {
+  GetNonTypeNameSpace(const NameSpace& non_types) const {
     my_non_types_.reset(new NameSpace(non_types));
     for (const auto& d : declarations_) {
       if (!d->GetType()) (*my_non_types_)[d->Id()] = d.get();
@@ -485,6 +485,6 @@ public:
 private:
   std::vector<std::shared_ptr<Declaration>> declarations_;
   std::vector<std::shared_ptr<Expression>> body_;
-  std::unique_ptr<NameSpace> my_types_;
-  std::unique_ptr<NameSpace> my_non_types_;
+  mutable std::unique_ptr<NameSpace> my_types_;
+  mutable std::unique_ptr<NameSpace> my_non_types_;
 };
