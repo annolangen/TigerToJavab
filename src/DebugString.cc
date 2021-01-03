@@ -233,7 +233,6 @@ std::string& AppendDebugString(std::string& out, const Type& t) {
 std::string& AppendDebugString(std::string& out, const Expression& e) {
   AppendExpressionVisitor visitor(out);
   e.Accept(visitor);
-  out += " (" + e.GetType() + ") ";
   return out;
 }
 std::string& AppendDebugString(std::string& out, const Declaration& d) {

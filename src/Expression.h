@@ -88,7 +88,8 @@ public:
   static void SetTypesBelow(Expression& root);
 
 protected:
-  void SetNameSpacesBelow(const NameSpace* types, const NameSpace* non_types) {
+  void SetNameSpacesBelow(const NameSpace* types,
+                          const NameSpace* non_types) override {
     types_ = types;
     non_types_ = non_types;
     TreeNode::SetNameSpacesBelow(types, non_types);

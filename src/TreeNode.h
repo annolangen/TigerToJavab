@@ -16,7 +16,7 @@ public:
 
   // Returns new scope for a Let expression
   virtual std::optional<const NameSpace*>
-  GetTypeNameSpace(const NameSpace& types) {
+  GetTypeNameSpace(const NameSpace& types) const {
     return {};
   }
 
@@ -33,7 +33,8 @@ public:
   virtual std::optional<Declaration*> declaration() { return {}; }
 
 protected:
-  void SetNameSpacesBelow(const NameSpace* types, const NameSpace* non_types) {
+  virtual void SetNameSpacesBelow(const NameSpace* types,
+                                  const NameSpace* non_types) {
     if (auto n = GetTypeNameSpace(*types); n) types = *n;
     if (auto n = GetNonTypeNameSpace(*non_types); n) non_types = *n;
     for (auto c : Children()) c->SetNameSpacesBelow(types, non_types);

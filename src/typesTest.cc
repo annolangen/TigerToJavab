@@ -21,7 +21,6 @@ const std::string& InferType(Expression& e) {
 
 SCENARIO("types functions", "[types]") {
   GIVEN("Leaf expressions") {
-    /*
     auto anInt = []() { return new IntegerConstant(3); };
     REQUIRE(InferType(*anInt()) == "int");
     auto aString = []() { return new StringConstant("Hello"); };
@@ -54,9 +53,7 @@ SCENARIO("types functions", "[types]") {
         //        REQUIRE(InferType(let) == "int");
       }
     }
-    */
     GIVEN("Parsed test") {
-      /*
       HasType("3", "int");
       HasType("\"Hello\"", "string");
       //      HasType("nil", "none");
@@ -71,7 +68,6 @@ SCENARIO("types functions", "[types]") {
       HasType("while 1 do \"hello\"", "none");
       HasType("for i := 1 to 3 do 6", "none");
       HasType("let var a : int := 3 in a end", "int");
-      */
       HasType("let var a := 666 in a + 3 end", "int");
     }
     GIVEN("Complex case") {
@@ -79,11 +75,9 @@ SCENARIO("types functions", "[types]") {
               "in a end end",
               "T");
       HasType("a", "???");
-
       HasType("let function f():int = g() function g():int = f() in f() end",
               "int");
-      HasType("let function f() = g() function g() = f() in f() end", "int");
-      FAIL("test");
+      HasType("let function f() = g() function g() = f() in f() end", "unset");
     }
 
     // Composite expressions

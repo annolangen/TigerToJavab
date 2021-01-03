@@ -1,7 +1,6 @@
 #include "DebugString.h"
 #include "ToString.h"
 #include "syntax_nodes.h"
-#include <iostream>
 namespace {
 
 NameSpace kBuiltInTypes;
@@ -106,10 +105,8 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
   }
   bool VisitId(const std::string& id) override {
     if (auto found = expr_.non_types_->Lookup(id); found) {
-      std::cout << "found " << id << std::endl;
       return SetType(**(*found)->GetValueType());
     }
-    std::cout << "not found " << id << " in " << *expr_.non_types_ << std::endl;
     return SetType(kUnknownType);
   }
   bool VisitField(const LValue& value, const std::string& id) override {
@@ -161,7 +158,6 @@ void Expression::SetTypesBelow(Expression& root) {
   }
   TypeSetter setter(root);
   root.Accept(setter);
-  std::cout << "SetTypesBelow " << DebugString(root) << std::endl;
 }
 
 Expression::Expression() : type_(&kUnsetType) {}

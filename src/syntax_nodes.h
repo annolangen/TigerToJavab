@@ -443,10 +443,12 @@ public:
   }
 
   virtual std::optional<const NameSpace*>
-  GetTypeNameSpace(const NameSpace& types) {
-    my_types_.reset(new NameSpace(types));
-    for (const auto& d : declarations_) {
-      if (d->GetType()) (*my_types_)[d->Id()] = d.get();
+  GetTypeNameSpace(const NameSpace& types) const {
+    if (!my_types_) {
+      my_types_.reset(new NameSpace(types));
+      for (const auto& d : declarations_) {
+        if (d->GetType()) (*my_types_)[d->Id()] = d.get();
+      }
     }
     return my_types_.get();
   }
@@ -454,9 +456,11 @@ public:
   // Returns new scope for a Let expression
   virtual std::optional<const NameSpace*>
   GetNonTypeNameSpace(const NameSpace& non_types) const {
-    my_non_types_.reset(new NameSpace(non_types));
-    for (const auto& d : declarations_) {
-      if (!d->GetType()) (*my_non_types_)[d->Id()] = d.get();
+    if (!my_non_types_) {
+      my_non_types_.reset(new NameSpace(non_types));
+      for (const auto& d : declarations_) {
+        if (!d->GetType()) (*my_non_types_)[d->Id()] = d.get();
+      }
     }
     return my_non_types_.get();
   }
