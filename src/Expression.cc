@@ -1,6 +1,7 @@
 #include "DebugString.h"
 #include "ToString.h"
 #include "syntax_nodes.h"
+#include <iostream>
 namespace {
 
 NameSpace kBuiltInTypes;
@@ -32,6 +33,21 @@ std::string kUnknownType = "???";
 
 std::string kUnsetType = "unset";
 
+struct RecordTypeClassifier : public TypeVisitor {
+  bool VisitRecordType(const std::vector<TypeField>& fields) override {
+    is_record_type = true;
+    return false;
+  }
+
+  bool is_record_type = false;
+};
+
+bool IsRecordType(const Type& type) {
+  RecordTypeClassifier classifier;
+  type.Accept(classifier);
+  return classifier.is_record_type;
+}
+
 } // namespace
 
 // TODO deal with Nil!
@@ -61,6 +77,8 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     return SetType(right.GetType());
   }
   bool VisitAssignment(const LValue& value, const Expression& expr) override {
+    if (auto r = RecordType(value); r) {
+    }
     return SetType(kNoneType);
   }
   bool VisitFunctionCall(
@@ -133,6 +151,20 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
   bool SetType(const std::string& type) {
     expr_.type_ = &type;
     return false;
+  }
+
+  // Returns name of record type, if the given child expression has one.
+  std::optional<const std::string*> RecordType(const Expression& child) {
+    if (auto n = child.GetType(); n) {
+      if (auto t = child.type_.Lookup(*n); t) {
+        if (IsRecordType(*t)) return *n;
+      } else {
+        std::cerr << "Undefined type " << *n << std::endl;
+      }
+    } else {
+      std::cerr << "Untyped child " << child << std::endl;
+    }
+    return {};
   }
   const Expression& expr_;
 };
