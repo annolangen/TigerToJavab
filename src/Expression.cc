@@ -14,6 +14,7 @@ class BuiltInBody : public Expression {
 public:
   bool Accept(ExpressionVisitor&) const override { return true; }
 };
+
 void AddProc(std::string_view id, std::vector<TypeField> params) {
   AddDecl(new FunctionDeclaration(id, std::move(params), new BuiltInBody()));
 }
@@ -33,9 +34,11 @@ std::string kUnsetType = "unset";
 
 } // namespace
 
-// Sets inferred_type for all nodes with values, except for Nil. Nil
-// requires a separate visitor. Assumes that types of all child
-// expression have already been set.  Refrains from type checking.
+// TODO deal with Nil!
+
+// Sets type_ for all Expression nodes with values, except for
+// Nil. Assumes that types of all child expression have already been
+// set.  Refrains from type checking.
 struct TypeSetter : public ExpressionVisitor, LValueVisitor {
   TypeSetter(const Expression& expr) : expr_(expr) {}
   bool VisitStringConstant(const std::string& text) override {
@@ -64,9 +67,7 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
       const std::string& id,
       const std::vector<std::shared_ptr<Expression>>& args) override {
     if (auto d = expr_.non_types_->Lookup(id); d) {
-      if (auto vt = (*d)->GetValueType(); vt) {
-        return SetType(**vt);
-      }
+      if (auto vt = (*d)->GetValueType(); vt) return SetType(**vt);
     }
     return SetType(kUnknownType);
   }
