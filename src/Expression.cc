@@ -155,14 +155,11 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
 
   // Returns name of record type, if the given child expression has one.
   std::optional<const std::string*> RecordType(const Expression& child) {
-    if (auto n = child.GetType(); n) {
-      if (auto t = child.type_.Lookup(*n); t) {
-        if (IsRecordType(*t)) return *n;
-      } else {
-        std::cerr << "Undefined type " << *n << std::endl;
-      }
+    const std::string& n = child.GetType();
+    if (auto d = child.types_->Lookup(n); d) {
+      if (IsRecordType(**(*d)->GetType())) return &n;
     } else {
-      std::cerr << "Untyped child " << child << std::endl;
+      std::cerr << "Undefined type " << n << std::endl;
     }
     return {};
   }

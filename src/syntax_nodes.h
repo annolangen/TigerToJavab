@@ -215,7 +215,7 @@ public:
   bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitIndex(*value_, *expr_);
   }
-  virtual std::vector<TreeNode*> Children() {
+  std::vector<TreeNode*> Children() override {
     return {value_.get(), expr_.get()};
   }
 
@@ -442,8 +442,8 @@ public:
     return children;
   }
 
-  virtual std::optional<const NameSpace*>
-  GetTypeNameSpace(const NameSpace& types) const {
+  std::optional<const NameSpace*>
+  GetTypeNameSpace(const NameSpace& types) const override {
     if (!my_types_) {
       my_types_.reset(new NameSpace(types));
       for (const auto& d : declarations_) {
@@ -454,8 +454,8 @@ public:
   }
 
   // Returns new scope for a Let expression
-  virtual std::optional<const NameSpace*>
-  GetNonTypeNameSpace(const NameSpace& non_types) const {
+  std::optional<const NameSpace*>
+  GetNonTypeNameSpace(const NameSpace& non_types) const override {
     if (!my_non_types_) {
       my_non_types_.reset(new NameSpace(non_types));
       for (const auto& d : declarations_) {
