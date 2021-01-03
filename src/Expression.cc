@@ -34,10 +34,9 @@ std::string kUnsetType = "unset";
 
 } // namespace
 
-// Sets inferred_type for all nodex with values, except for Nil. Nil requires a
-// separate visitor. This is used in combination with a SyntaxTreeVisitor, which
-// should ensure that types of all child expression have already been set.
-// Refrains from type checking.
+// Sets inferred_type for all nodes with values, except for Nil. Nil
+// requires a separate visitor. Assumes that types of all child
+// expression have already been set.  Refrains from type checking.
 struct TypeSetter : public ExpressionVisitor, LValueVisitor {
   TypeSetter(const Expression& expr) : expr_(expr) {}
   bool VisitStringConstant(const std::string& text) override {
@@ -140,17 +139,6 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
   const Expression& expr_;
 };
 
-struct TreeTypeSetter : SyntaxTreeVisitor {
-  bool VisitChild(Expression& child) override { return SetType(child); }
-  bool AfterChildren(Expression& parent) override { return SetType(parent); }
-  static bool SetType(Expression& e) {
-    TypeSetter setter(e);
-    e.Accept(setter);
-    std::cout << "SetType " << DebugString(e) << std::endl;
-    return true;
-  }
-};
-
 void Expression::SetNameSpacesBelow(Expression& root) {
   for (auto* d : kTypeDecls) kBuiltInTypes[d->Id()] = d;
   AddProc("print", {{"s", "string"}});
@@ -168,10 +156,11 @@ void Expression::SetNameSpacesBelow(Expression& root) {
 }
 
 void Expression::SetTypesBelow(Expression& root) {
-  TreeTypeSetter children_setter;
-  root.Accept(children_setter);
-  TypeSetter root_setter(root);
-  root.Accept(root_setter);
+  for (auto c : root.Children()) {
+    if (auto e = c->expression(); e) SetTypesBelow(**e);
+  }
+  TypeSetter setter(root);
+  root.Accept(setter);
   std::cout << "SetTypesBelow " << DebugString(root) << std::endl;
 }
 

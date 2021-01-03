@@ -2,7 +2,6 @@
 #include "BinaryOp.h"
 #include "DeclarationVisitor.h"
 #include "NameSpace.h"
-#include "SyntaxTreeVisitor.h"
 #include "TreeNode.h"
 #include "TypeVisitor.h"
 #include <algorithm>
@@ -50,7 +49,7 @@ public:
   std::optional<Declaration*> declaration() override { return this; }
 
   virtual bool Accept(DeclarationVisitor& visitor) const = 0;
-  virtual bool Accept(SyntaxTreeVisitor& visitor) { return true; };
+
   const std::string& Id() const { return id_; }
 
   // Returns the type of a type declaration
@@ -75,11 +74,6 @@ public:
 
   virtual bool Accept(ExpressionVisitor& visitor) const = 0;
 
-  // Calls VisitChild on all children.
-  virtual bool Accept(SyntaxTreeVisitor& visitor) {
-    return AcceptForChildren(visitor, std::vector<Expression*>());
-  }
-
   // Returns type of this expression. Undefined behavior until SetTypesBelow has
   // been called on the root.
   const std::string& GetType() const { return *type_; }
@@ -99,15 +93,6 @@ protected:
     non_types_ = non_types;
     TreeNode::SetNameSpacesBelow(types, non_types);
   }
-
-  template <class R>
-  bool AcceptForChildren(SyntaxTreeVisitor& visitor, R children) {
-    return visitor.BeforeChildren(*this) &&
-           std::all_of(children.begin(), children.end(),
-                       [&visitor](auto& c) { return c->Accept(visitor); }) &&
-           visitor.AfterChildren(*this);
-  }
-
   const NameSpace* types_ = nullptr;
   const NameSpace* non_types_ = nullptr;
 

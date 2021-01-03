@@ -88,10 +88,7 @@ public:
   bool Accept(DeclarationVisitor& visitor) const override {
     return visitor.VisitVariableDeclaration(Id(), type_id_, *expr_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return visitor.BeforeChildren(*this) && expr_->Accept(visitor) &&
-           visitor.AfterChildren(*this);
-  }
+  std::vector<TreeNode*> Children() override { return {expr_.get()}; }
   std::optional<const std::string*> GetValueType() const override {
     return type_id_ ? &*type_id_ : &expr_->GetType();
   }
@@ -126,10 +123,8 @@ public:
   bool Accept(DeclarationVisitor& visitor) const override {
     return visitor.VisitFunctionDeclaration(Id(), params_, type_id_, *body_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return visitor.BeforeChildren(*this) && body_->Accept(visitor) &&
-           visitor.AfterChildren(*this);
-  }
+
+  std::vector<TreeNode*> Children() override { return {body_.get()}; }
 
   std::optional<const NameSpace*>
   GetNonTypeNameSpace(const NameSpace& non_types) const override {
@@ -202,9 +197,7 @@ public:
   bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitField(*value_, id_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(visitor, std::vector<Expression*>{value_.get()});
-  }
+  std::vector<TreeNode*> Children() override { return {value_.get()}; }
 
   std::optional<std::string> GetField() const override { return id_; }
   std::optional<const LValue*> GetChild() const override {
@@ -222,9 +215,8 @@ public:
   bool Accept(LValueVisitor& visitor) const override {
     return visitor.VisitIndex(*value_, *expr_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(
-        visitor, std::vector<Expression*>{value_.get(), expr_.get()});
+  virtual std::vector<TreeNode*> Children() {
+    return {value_.get(), expr_.get()};
   }
 
   std::optional<const Expression*> GetIndexValue() const override {
@@ -245,9 +237,7 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitNegated(*expr_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(visitor, std::vector<Expression*>{expr_.get()});
-  }
+  std::vector<TreeNode*> Children() override { return {expr_.get()}; }
 
 private:
   std::unique_ptr<Expression> expr_;
@@ -260,9 +250,8 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitBinary(*left_, op_, *right_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return visitor.BeforeChildren(*this) && left_->Accept(visitor) &&
-           right_->Accept(visitor) && visitor.AfterChildren(*this);
+  std::vector<TreeNode*> Children() override {
+    return {left_.get(), right_.get()};
   }
 
 private:
@@ -278,9 +267,8 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitAssignment(*value_, *expr_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(
-        visitor, std::vector<Expression*>{value_.get(), expr_.get()});
+  std::vector<TreeNode*> Children() override {
+    return {value_.get(), expr_.get()};
   }
 
 private:
@@ -296,8 +284,10 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitFunctionCall(id_, args_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(visitor, args_);
+  std::vector<TreeNode*> Children() override {
+    std::vector<TreeNode*> children;
+    for (auto& c : args_) children.push_back(c.get());
+    return children;
   }
 
 private:
@@ -313,8 +303,10 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitBlock(exprs_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(visitor, exprs_);
+  std::vector<TreeNode*> Children() override {
+    std::vector<TreeNode*> children;
+    for (auto& c : exprs_) children.push_back(c.get());
+    return children;
   }
 
 private:
@@ -329,12 +321,10 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitRecord(type_id_, field_values_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return visitor.BeforeChildren(*this) &&
-           std::all_of(
-               field_values_.begin(), field_values_.end(),
-               [&visitor](auto& f) { return f.expr->Accept(visitor); }) &&
-           visitor.AfterChildren(*this);
+  std::vector<TreeNode*> Children() override {
+    std::vector<TreeNode*> children;
+    for (auto& f : field_values_) children.push_back(f.expr.get());
+    return children;
   }
 
 private:
@@ -350,9 +340,8 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitArray(type_id_, *size_, *value_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(
-        visitor, std::vector<Expression*>{size_.get(), value_.get()});
+  std::vector<TreeNode*> Children() override {
+    return {size_.get(), value_.get()};
   }
 
 private:
@@ -368,9 +357,8 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitIfThen(*condition_, *expr_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(
-        visitor, std::vector<Expression*>{condition_.get(), expr_.get()});
+  std::vector<TreeNode*> Children() override {
+    return {condition_.get(), expr_.get()};
   }
 
 private:
@@ -386,10 +374,8 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitIfThenElse(*condition_, *then_expr_, *else_expr_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(
-        visitor, std::vector<Expression*>{condition_.get(), then_expr_.get(),
-                                          else_expr_.get()});
+  std::vector<TreeNode*> Children() override {
+    return {condition_.get(), then_expr_.get(), else_expr_.get()};
   }
 
 private:
@@ -405,9 +391,8 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitWhile(*condition_, *body_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(
-        visitor, std::vector<Expression*>{condition_.get(), body_.get()});
+  std::vector<TreeNode*> Children() override {
+    return {condition_.get(), body_.get()};
   }
 
 private:
@@ -423,10 +408,8 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitFor(id_, *first_, *last_, *body_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    return AcceptForChildren(
-        visitor,
-        std::vector<Expression*>{first_.get(), last_.get(), body_.get()});
+  std::vector<TreeNode*> Children() override {
+    return {first_.get(), last_.get(), body_.get()};
   }
 
 private:
@@ -452,15 +435,11 @@ public:
   bool Accept(ExpressionVisitor& visitor) const override {
     return visitor.VisitLet(declarations_, body_);
   }
-  bool Accept(SyntaxTreeVisitor& visitor) override {
-    if (!visitor.BeforeChildren(*this)) return false;
-    for (auto d : declarations_) {
-      if (!d->Accept(visitor)) return false;
-    }
-    for (auto e : body_) {
-      if (!e->Accept(visitor)) return false;
-    }
-    return visitor.AfterChildren(*this);
+  std::vector<TreeNode*> Children() override {
+    std::vector<TreeNode*> children;
+    for (auto& c : declarations_) children.push_back(c.get());
+    for (auto& c : body_) children.push_back(c.get());
+    return children;
   }
 
   virtual std::optional<const NameSpace*>
