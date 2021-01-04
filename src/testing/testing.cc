@@ -26,7 +26,7 @@ std::string RunJava() {
   // Command that works on Cygwin and Linux by avoiding path separator in the
   // Java classpath.
   const char* cmd = "test -f /tmp/Std.class || cp -f ../../src/Std.class /tmp;"
-                    "cd /tmp; java Main";
+                    "cd /tmp; cp Main.class $(date +%N).class; java Main";
   std::array<char, 128> buffer;
   std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
   if (pipe) {
