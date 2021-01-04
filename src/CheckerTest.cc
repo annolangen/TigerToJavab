@@ -42,6 +42,27 @@ SCENARIO("Static checking", "[checker]") {
     REQUIRE(StartsWith(errors[0], "Different names"));
     REQUIRE(StartsWith(errors[1], "Different names"));
   }
+  GIVEN("Wrong field type") {
+    std::vector<std::string> errors =
+        Check("let type Bulk = {height:int, weight:int} in "
+              "Bulk {height=\"6 feet\", weight=200} end");
+    REQUIRE(errors.size() == 1);
+    REQUIRE(errors[0] ==
+            "Different types string and int for field height of record Bulk");
+  }
+  GIVEN("Wrong type") {
+    std::vector<std::string> errors =
+        Check("let type Bulk = {height:int, weight:int} in "
+              "Heft {height=6, weight=200} end");
+    REQUIRE(errors.size() == 1);
+    REQUIRE(errors[0] == "Unknown record type Heft");
+  }
+  GIVEN("Non record type") {
+    std::vector<std::string> errors =
+        Check("let type Bulk = int in Bulk {height=6, weight=200} end");
+    REQUIRE(errors.size() == 1);
+    REQUIRE(errors[0] == "Type Bulk is not a record");
+  }
 }
 
 } // namespace

@@ -93,9 +93,8 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     return SetType(right.GetType());
   }
   bool VisitAssignment(const LValue& value, const Expression& expr) override {
-    if (auto r = RecordType(value); r && IsNil(expr)) {
-      expr.type_ = *r;
-    }
+    // Type nil right hand side, if left hand side is record with known type
+    if (auto r = RecordType(value); r && IsNil(expr)) expr.type_ = *r;
     return SetType(kNoneType);
   }
   bool VisitFunctionCall(
