@@ -14,7 +14,7 @@ SCENARIO("Static checking", "[checker]") {
     std::vector<std::string> errors =
         Check("let type Bulk = {height:int, weight:int} in "
               "Bulk {height=6, weight=200} end");
-    REQUIRE(errors[0] == "unexpected");
+    REQUIRE(errors.size() == 0);
   }
 }
 

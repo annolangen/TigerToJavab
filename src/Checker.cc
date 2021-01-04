@@ -3,6 +3,7 @@
 #include "StoppingExpressionVisitor.h"
 #include "ToString.h"
 #include "syntax_nodes.h"
+#include <functional>
 #include <sstream>
 
 namespace {

@@ -128,7 +128,7 @@ expr_seq:
 expr_seq_opt: %empty {} | expr_seq {$$ = std::move($1);};
 field_list:
   "identifier" "=" expr {AppendFieldValue($1, $3, $$);}
-| field_list COMMA "identifier" "=" expr {AppendFieldValue($3, $5, $1);}
+| field_list COMMA "identifier" "=" expr {AppendFieldValue($3, $5, $1); $$ = std::move($1);}
 ;
 field_list_opt: %empty {} | field_list {$$ = std::move($1);};
 expr:
