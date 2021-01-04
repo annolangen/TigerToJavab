@@ -9,7 +9,7 @@ class NameSpace;
 // and Declaration.
 class TreeNode {
 public:
-  virtual std::vector<TreeNode*> Children() {
+  virtual std::vector<TreeNode*> Children() const {
     static std::vector<TreeNode*> kNoChildren;
     return kNoChildren;
   }

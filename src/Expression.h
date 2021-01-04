@@ -24,6 +24,7 @@
 // from Accept or a visit method.
 
 // Abstract base class for Type nodes.
+class RecordType;
 class Type {
 public:
   virtual ~Type() = default;
@@ -39,6 +40,9 @@ public:
   GetFieldType(const std::string& field_id) const {
     return {};
   }
+
+  // Returns this, if it is a record type.
+  virtual std::optional<const RecordType*> recordType() const { return {}; }
 };
 
 // Abstract base class for Declaration nodes.
@@ -77,6 +81,15 @@ public:
   // Returns type of this expression. Undefined behavior until SetTypesBelow has
   // been called on the root.
   const std::string& GetType() const { return *type_; }
+
+  // Returns type name space for this expression. Undefined behavior until
+  // SetNameSpacesBelow has been called on the tree.
+  const NameSpace& GetTypeNameSpace() const { return *types_; }
+
+  // Returns name space for variables, functions, and function parameters for
+  // this expression. Undefined behavior until SetNameSpacesBelow has been
+  // called on the tree.
+  const NameSpace& GetNonTypeNameSpace() const { return *non_types_; }
 
   // Sets type and non_types name spaces for every expression in the tree with
   // the given root.
