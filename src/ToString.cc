@@ -5,6 +5,10 @@ std::ostream& operator<<(std::ostream& os, const TypeField& f) {
   return os << f.id << ": " << f.type_id;
 }
 
+std::ostream& operator<<(std::ostream& os, const FieldValue& f) {
+  return os << f.id << ": " << *f.expr;
+}
+
 namespace {
 using util::join;
 
@@ -121,6 +125,7 @@ public:
   }
   bool VisitRecord(const std::string& type_id,
                    const std::vector<FieldValue>& field_values) override {
+    os_ << "{" << (field_values | join(", ")) << "}";
     return true;
   }
   bool VisitArray(const std::string& type_id, const Expression& size,

@@ -1,5 +1,4 @@
 #include "Checker.h"
-#include "DebugString.h"
 #include "StoppingExpressionVisitor.h"
 #include "ToString.h"
 #include "syntax_nodes.h"
@@ -38,7 +37,7 @@ struct RecordFieldChecker : Checker {
     } else if (auto record_fields = (*r)->Fields();
                field_values.size() != record_fields.size()) {
       emit() << "Field counts differ for " << type_id << " " << **t << " and "
-             << DebugString(expr_);
+             << expr_;
     } else {
       for (int i = field_values.size(); --i >= 0;) {
         if (auto id = field_values[i].id; id != record_fields[i].id) {
