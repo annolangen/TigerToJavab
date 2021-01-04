@@ -171,16 +171,16 @@ public:
     os_ << "type " << id << " = " << type;
     return true;
   }
-  bool
-  VisitVariableDeclaration(const std::string& id,
-                           const std::optional<std::string>& type_id,
-                           const Expression& expr) override {
+  bool VisitVariableDeclaration(const std::string& id,
+                                const std::optional<std::string>& type_id,
+                                const Expression& expr) override {
     os_ << "var " << id << (type_id ? ": " + *type_id : "") << " = " << expr;
     return true;
   }
-  bool VisitFunctionDeclaration(
-      const std::string& id, const std::vector<TypeField>& params,
-      const std::optional<std::string> type_id, const Expression& body) override {
+  bool VisitFunctionDeclaration(const std::string& id,
+                                const std::vector<TypeField>& params,
+                                const std::optional<std::string> type_id,
+                                const Expression& body) override {
     os_ << "function " << id << (type_id ? ": " + *type_id : "") << " = "
         << body;
     return true;

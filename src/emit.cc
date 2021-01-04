@@ -113,6 +113,7 @@ struct StringConstant;
 struct ClassConstant;
 struct MethodRefConstant;
 struct NameAndTypeConstant;
+struct IntegerConstant;
 
 // Items in constant pool
 // https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html#jvms-4.4.
@@ -142,6 +143,7 @@ struct Constant {
   virtual bool Matches(std::string_view text) const { return false; }
   virtual bool Matches(u2 index) const { return false; }
   virtual bool Matches(u2 first, u2 second) const { return false; }
+  virtual bool Matches(int bytes) const { return false; }
 
   // Safe cast by virtual method
   virtual std::optional<Utf8Constant*> utf8() { return {}; }
@@ -149,6 +151,7 @@ struct Constant {
   virtual std::optional<ClassConstant*> clazz() { return {}; }
   virtual std::optional<MethodRefConstant*> methodRef() { return {}; }
   virtual std::optional<NameAndTypeConstant*> nameAndType() { return {}; }
+  virtual std::optional<IntegerConstant*> integer() { return {}; }
 };
 
 struct Ref : Constant {
@@ -181,6 +184,27 @@ struct StringConstant : Constant, Pushable {
   void Emit(std::ostream& os) const override {
     os.put(tag());
     Put2(os, string_index);
+  }
+
+  void Push(std::ostream& os) const override {
+    if (index < 256) {
+      os.put(Instruction::_ldc);
+      os.put(index);
+    } else {
+      os.put(Instruction::_ldc_w);
+      Put2(os, index);
+    }
+  }
+};
+
+struct IntegerConstant : Constant, Pushable {
+  u4 bytes;
+  Tag tag() const override { return kInteger; }
+  bool Matches(int other) const override { return other == bytes; }
+  std::optional<IntegerConstant*> integer() override { return this; }
+  void Emit(std::ostream& os) const override {
+    os.put(tag());
+    Put4(os, bytes);
   }
 
   void Push(std::ostream& os) const override {
@@ -236,7 +260,18 @@ struct NameAndTypeConstant : Constant {
 class LibraryFunction : public Invocable {};
 
 const std::unordered_map<std::string_view, const char*>
-    kTypeByLibraryFunctionName = {{"print", "(Ljava/lang/String;)V"}};
+    kTypeByLibraryFunctionName = {
+        {"print", "(Ljava/lang/String;)V"},
+        {"printi", "(I)V"},
+        {"flush", "()V"},
+        {"getChar", "()Ljava/lang/String;"},
+        {"ord", "(Ljava/lang/String;)I"},
+        {"chr", "(I)Ljava/lang/String;"},
+        {"size", "(Ljava/lang/String;)I"},
+        {"substring", "(Ljava/lang/String;II)Ljava/lang/String;"},
+        {"concat", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"},
+        {"not", "(I)I"},
+        {"exit", "(I)V"}};
 
 std::optional<const char*> LibraryFunctionType(std::string_view name) {
   if (auto found = kTypeByLibraryFunctionName.find(name);
@@ -252,6 +287,9 @@ struct JvmProgram : Program {
 
   const Pushable* DefineStringConstant(std::string_view text) override {
     return stringConstant(text);
+  }
+  const Pushable* DefineIntegerConstant(int i) override {
+    return integerConstant(i);
   }
 
   const Invocable* LookupLibraryFunction(std::string_view name) override {
@@ -324,6 +362,17 @@ struct JvmProgram : Program {
     }
     StringConstant* result = Adopt(new StringConstant());
     result->string_index = utf8_index;
+    return result;
+  }
+
+  IntegerConstant* integerConstant(int i) {
+    for (auto& c : constant_pool) {
+      if (c->tag() == ClassConstant::kInteger && c->Matches(i)) {
+        return *c->integer();
+      }
+    }
+    IntegerConstant* result = Adopt(new IntegerConstant());
+    result->bytes = i;
     return result;
   }
 

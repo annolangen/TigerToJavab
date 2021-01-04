@@ -59,6 +59,7 @@ struct Program {
   // Writes Java class file to given stream
   virtual void Emit(std::ostream& os) = 0;
   virtual const Pushable* DefineStringConstant(std::string_view text) = 0;
+  virtual const Pushable* DefineIntegerConstant(int i) = 0;
   virtual const Invocable* LookupLibraryFunction(std::string_view name) = 0;
   virtual void DefineFunction(uint16_t flags, std::string_view name,
                               std::string_view descriptor,
