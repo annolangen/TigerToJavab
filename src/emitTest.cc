@@ -10,6 +10,7 @@
 
 namespace {
 using emit::Program;
+using emit::Pushable;
 using testing::RunJava;
 
 std::string ReadFile(const char* path) {
@@ -33,7 +34,7 @@ SCENARIO("emits class file", "[emit]") {
     const char* msg = "Hello, World!\n";
     auto program = Program::JavaProgram();
     if (auto f = program->LookupLibraryFunction("print"); f) {
-      auto text = program->DefineStringConstant(msg);
+      const Pushable* text = program->DefineStringConstant(msg);
       std::ostringstream main_instructions;
       f->Call(main_instructions, {text});
       EmitAsMain(main_instructions, *program);
@@ -46,7 +47,7 @@ SCENARIO("emits class file", "[emit]") {
   GIVEN("printint") {
     auto program = Program::JavaProgram();
     if (auto f = program->LookupLibraryFunction("printi"); f) {
-      auto int_constant = program->DefineIntegerConstant(20202020);
+      const Pushable* int_constant = program->DefineIntegerConstant(20202020);
       std::ostringstream main_instructions;
       f->Call(main_instructions, {int_constant});
       EmitAsMain(main_instructions, *program);
