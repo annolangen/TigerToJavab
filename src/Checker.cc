@@ -7,7 +7,8 @@
 
 namespace {
 using Errors = std::vector<std::string>;
-using CheckFunction = std::function<void(const Expression&, Errors&)>;
+using CheckerBuilder = std::function<std::unique_ptr<ExpressionVisitor>(
+    const Expression&, Errors&)>;
 
 struct Emitter : public std::ostringstream {
   Emitter(Errors& v) : errors(v) {}
@@ -57,17 +58,73 @@ struct RecordFieldChecker : Checker {
   const Expression& expr_;
 };
 
-std::vector<CheckFunction> kCheckFunctions = {
-    [](const Expression& exp, Errors& errors) {
-      RecordFieldChecker checker(exp, errors);
-      exp.Accept(checker);
-    }};
+bool IsPrimitive(const std::string& type) {
+  return type == "int" || type == "string";
+}
+
+// Binary operators >, <, >=, and <= may be either both integer or both string
+// (2.5). Operators & and | are lazy logical operators on integers (2.5)
+struct BinaryOpChecker : Checker {
+  BinaryOpChecker(const Expression& e, Errors& errors)
+      : expr_(e), Checker(errors) {}
+  bool VisitBinary(const Expression& left, BinaryOp op,
+                   const Expression& right) override {
+    switch (op) {
+    case kGreaterThan:
+    case kLessThan:
+    case kNotGreaterThan:
+    case kNotLessThan:
+      CheckComparison(left.GetType(), right.GetType(), op);
+      break;
+    case kAnd:
+    case kOr:
+      CheckInt(left.GetType(), op);
+      CheckInt(right.GetType(), op);
+      break;
+    }
+    return false;
+  }
+  void CheckComparison(const std::string& left_type,
+                       const std::string& right_type, BinaryOp op) {
+    CheckPrimitive(left_type, op);
+    CheckPrimitive(right_type, op);
+    if (left_type != right_type) {
+      emit() << "Types of " << op << " should match, but got " << left_type
+             << " and " << right_type;
+    }
+  }
+  void CheckPrimitive(const std::string& type, BinaryOp op) {
+    if (!IsPrimitive(type)) {
+      emit() << "Operand type of " << op << " must be int or string, but got "
+             << type;
+    }
+  }
+  void CheckInt(const std::string& type, BinaryOp op) {
+    if (!IsPrimitive(type)) {
+      emit() << "Operand type for " << op << " must be int, but got " << type;
+    }
+  }
+  const Expression& expr_;
+};
+
+#define CHECK_BUILDER(C)                                                       \
+  [](const Expression& exp, Errors& errors) {                                  \
+    return std::make_unique<C>(exp, errors);                                   \
+  }
+
+std::vector<CheckerBuilder> kCheckerBuilders = {
+    CHECK_BUILDER(RecordFieldChecker),
+    CHECK_BUILDER(BinaryOpChecker),
+};
 
 void CheckBelow(const Expression& parent, Errors& errors,
-                std::vector<CheckFunction>& checkers) {
-  for (auto f : checkers) f(parent, errors);
+                std::vector<CheckerBuilder>& checker_builders) {
+  for (auto f : checker_builders) {
+    auto checker = f(parent, errors);
+    parent.Accept(*checker);
+  }
   for (auto* n : parent.Children()) {
-    if (auto e = n->expression(); e) CheckBelow(**e, errors, checkers);
+    if (auto e = n->expression(); e) CheckBelow(**e, errors, checker_builders);
   }
 }
 
@@ -75,6 +132,6 @@ void CheckBelow(const Expression& parent, Errors& errors,
 
 Errors ListErrors(const Expression& root) {
   Errors errors;
-  CheckBelow(root, errors, kCheckFunctions);
+  CheckBelow(root, errors, kCheckerBuilders);
   return errors;
 }

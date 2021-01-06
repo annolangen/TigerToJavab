@@ -63,6 +63,10 @@ SCENARIO("Static checking", "[checker]") {
     REQUIRE(errors.size() == 1);
     REQUIRE(errors[0] == "Type Bulk is not a record");
   }
+  GIVEN("Good comparison") {
+    std::vector<std::string> errors = Check("\"Hell\" < \"Hello\"");
+    REQUIRE(errors.size() == 0);
+  }
 }
 
 } // namespace
