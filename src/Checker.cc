@@ -81,6 +81,8 @@ struct BinaryOpChecker : Checker {
       CheckInt(left.GetType(), op);
       CheckInt(right.GetType(), op);
       break;
+    default:
+      break;
     }
     return false;
   }
@@ -100,7 +102,7 @@ struct BinaryOpChecker : Checker {
     }
   }
   void CheckInt(const std::string& type, BinaryOp op) {
-    if (!IsPrimitive(type)) {
+    if (type != "int") {
       emit() << "Operand type for " << op << " must be int, but got " << type;
     }
   }

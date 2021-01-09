@@ -66,6 +66,24 @@ SCENARIO("Static checking", "[checker]") {
   GIVEN("Good comparison") {
     std::vector<std::string> errors = Check("\"Hell\" < \"Hello\"");
     REQUIRE(errors.size() == 0);
+    errors = Check("7 < (8 + 9)");
+    REQUIRE(errors.size() == 0);
+  }
+  GIVEN("Mismatched operands") {
+    std::vector<std::string> errors = Check("666 < \"Hello\"");
+    REQUIRE(errors.size() == 1);
+    REQUIRE(errors[0] == "Types of < should match, but got int and string");
+  }
+  GIVEN("Non-int") {
+    std::vector<std::string> and_errors = Check("\"foo\" & \"bar\"");
+    REQUIRE(and_errors.size() == 2);
+    REQUIRE(and_errors[0] == "Operand type for & must be int, but got string");
+    REQUIRE(and_errors[1] == "Operand type for & must be int, but got string");
+
+    std::vector<std::string> or_errors = Check("\"foo\" | \"bar\"");
+    REQUIRE(or_errors.size() == 2);
+    REQUIRE(or_errors[0] == "Operand type for | must be int, but got string");
+    REQUIRE(or_errors[1] == "Operand type for | must be int, but got string");
   }
 }
 
