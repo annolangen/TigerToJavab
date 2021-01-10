@@ -85,6 +85,18 @@ SCENARIO("Static checking", "[checker]") {
     REQUIRE(or_errors[0] == "Operand type for | must be int, but got string");
     REQUIRE(or_errors[1] == "Operand type for | must be int, but got string");
   }
+  GIVEN("int condition") {
+    auto errors = Check("if 1 < 2 then printi(1)");
+    REQUIRE(errors.size() == 0);
+  }
+  GIVEN("string condition") {
+    for (auto e : {"if \"Hello\" then printi(6)", "if \"Hello\" then 7 else 8",
+                   "while \"Hello\" do printi(6)"}) {
+      auto errors = Check(e);
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Conditions must be int, but got string");
+    }
+  }
 }
 
 } // namespace

@@ -109,6 +109,32 @@ struct BinaryOpChecker : Checker {
   const Expression& expr_;
 };
 
+// Conditionals must evaluate to integers (2.8)
+struct ConditionalChecker : Checker {
+  ConditionalChecker(const Expression& e, Errors& errors)
+      : expr_(e), Checker(errors) {}
+  bool VisitIfThen(const Expression& condition, const Expression&) override {
+    return CheckInt(condition);
+  }
+  bool VisitIfThenElse(const Expression& condition, const Expression&,
+                       const Expression&) override {
+    return CheckInt(condition);
+  }
+  virtual bool VisitWhile(const Expression& condition,
+                          const Expression&) override {
+    return CheckInt(condition);
+  }
+  bool CheckInt(const Expression& condition) {
+    const std::string& type = condition.GetType();
+    if (type != "int") {
+      emit() << "Conditions must be int, but got " << type;
+    }
+    return false;
+  }
+
+  const Expression& expr_;
+};
+
 #define CHECK_BUILDER(C)                                                       \
   [](const Expression& exp, Errors& errors) {                                  \
     return std::make_unique<C>(exp, errors);                                   \
@@ -117,6 +143,7 @@ struct BinaryOpChecker : Checker {
 std::vector<CheckerBuilder> kCheckerBuilders = {
     CHECK_BUILDER(RecordFieldChecker),
     CHECK_BUILDER(BinaryOpChecker),
+    CHECK_BUILDER(ConditionalChecker),
 };
 
 void CheckBelow(const Expression& parent, Errors& errors,
