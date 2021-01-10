@@ -3,6 +3,7 @@
 #include "ToString.h"
 #include "syntax_nodes.h"
 #include <iostream>
+
 namespace {
 
 NameSpace kBuiltInTypes;
@@ -198,12 +199,12 @@ void Expression::SetNameSpacesBelow(Expression& root) {
   root.SetNameSpacesBelow(&kBuiltInTypes, &kBuiltInFunctions);
 }
 
-void Expression::SetTypesBelow(Expression& root) {
-  for (auto c : root.Children()) {
-    if (auto e = c->expression(); e) SetTypesBelow(**e);
+void Expression::SetTypesBelow(TreeNode& root) {
+  for (auto c : root.Children()) SetTypesBelow(*c);
+  if (auto e = root.expression(); e) {
+    TypeSetter setter(**e);
+    (*e)->Accept(setter);
   }
-  TypeSetter setter(root);
-  root.Accept(setter);
 }
 
 Expression::Expression() : type_(&kUnsetType) {}

@@ -98,7 +98,7 @@ public:
   // Sets types in every expression in the tree with the given
   // root. Undefined behavior until SetNameSpacesBelow has been
   // called.
-  static void SetTypesBelow(Expression& root);
+  static void SetTypesBelow(TreeNode& root);
 
 protected:
   void SetNameSpacesBelow(const NameSpace* types,

@@ -67,6 +67,7 @@ SCENARIO("types functions", "[types]") {
       HasType("while 1 do \"hello\"", "none");
       HasType("for i := 1 to 3 do 6", "none");
       HasType("let var a : int := 3 in a end", "int");
+      HasType("let var a := 3 in a end", "int");
       HasType("let var a := 666 in a + 3 end", "int");
     }
     GIVEN("Complex case") {
