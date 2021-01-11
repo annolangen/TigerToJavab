@@ -3,20 +3,22 @@
 #include "testing/testing.h"
 
 namespace {
-using testing::Parse;
-using testing::RunJava;
 
-const char* tiger = R"(print("Hello World"))";
+std::string CompileAndRun(const char* program) {
+  if (auto exp = testing::Parse(program); !exp) {
+    return "Parse Failed";
+  } else {
+    Expression::SetNameSpacesBelow(*exp);
+    Expression::SetTypesBelow(*exp);
+    Compile(*exp);
+    return testing::RunJava();
+  }
+}
 
 SCENARIO("compiles to class file", "[compile]") {
   GIVEN("Hello World") {
-    auto exp = Parse(tiger);
-    if (exp) {
-      Compile(*exp);
-      REQUIRE(RunJava() == "Hello World");
-    } else {
-      FAIL("Parse Failed");
-    }
+    REQUIRE(CompileAndRun("print(\"Hello World\")") == "Hello World");
   }
+  GIVEN("printi") { REQUIRE(CompileAndRun("printi(666)") == "666"); }
 }
 } // namespace
