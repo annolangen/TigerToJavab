@@ -284,7 +284,7 @@ public:
                std::vector<std::shared_ptr<Expression>>&& args)
       : id_(id), args_(std::move(args)) {}
   bool Accept(ExpressionVisitor& visitor) const override {
-    return visitor.VisitFunctionCall(id_, args_);
+    return visitor.VisitFunctionCall(id_, args_, *this);
   }
   std::vector<TreeNode*> Children() const override {
     std::vector<TreeNode*> children;
@@ -321,7 +321,7 @@ public:
   Record(std::string_view type_id, std::vector<FieldValue>&& field_values)
       : type_id_(type_id), field_values_(std::move(field_values)) {}
   bool Accept(ExpressionVisitor& visitor) const override {
-    return visitor.VisitRecord(type_id_, field_values_);
+    return visitor.VisitRecord(type_id_, field_values_, *this);
   }
   std::vector<TreeNode*> Children() const override {
     std::vector<TreeNode*> children;

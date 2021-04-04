@@ -141,7 +141,8 @@ public:
   }
   virtual bool
   VisitFunctionCall(const std::string& id,
-                    const std::vector<std::shared_ptr<Expression>>& args) {
+                    const std::vector<std::shared_ptr<Expression>>& args,
+                    const Expression& exp) {
     return std::all_of(args.begin(), args.end(),
                        [this](const auto& arg) { return arg->Accept(*this); });
   }
@@ -151,7 +152,8 @@ public:
                        [this](const auto& arg) { return arg->Accept(*this); });
   }
   virtual bool VisitRecord(const std::string& type_id,
-                           const std::vector<FieldValue>& field_values) {
+                           const std::vector<FieldValue>& field_values,
+                           const Expression& exp) {
     return true;
   }
   virtual bool VisitArray(const std::string& type_id, const Expression& size,

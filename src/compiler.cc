@@ -34,9 +34,9 @@ public:
   bool VisitAssignment(const LValue& value, const Expression& expr) override {
     return expr.Accept(*this);
   }
-  bool VisitFunctionCall(
-      const std::string& id,
-      const std::vector<std::shared_ptr<Expression>>& args) override {
+  bool VisitFunctionCall(const std::string& id,
+                         const std::vector<std::shared_ptr<Expression>>& args,
+                         const Expression& exp) override {
     // save the size of pushables for later - will make argument counting
     // easier.
     for (const auto& a : args) a->Accept(*this);
@@ -63,7 +63,8 @@ public:
                        [this](const auto& arg) { return arg->Accept(*this); });
   }
   bool VisitRecord(const std::string& type_id,
-                   const std::vector<FieldValue>& field_values) override {
+                   const std::vector<FieldValue>& field_values,
+                   const Expression& exp) override {
     return true;
   }
   bool VisitArray(const std::string& type_id, const Expression& size,

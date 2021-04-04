@@ -98,9 +98,9 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     if (auto r = RecordType(value); r && IsNil(expr)) expr.type_ = *r;
     return SetType(kNoneType);
   }
-  bool VisitFunctionCall(
-      const std::string& id,
-      const std::vector<std::shared_ptr<Expression>>& args) override {
+  bool VisitFunctionCall(const std::string& id,
+                         const std::vector<std::shared_ptr<Expression>>& args,
+                         const Expression& exp) override {
     if (auto d = expr_.non_types_->Lookup(id); d) {
       if (auto vt = (*d)->GetValueType(); vt) return SetType(**vt);
     }
@@ -111,7 +111,8 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
     return SetType(exprs.empty() ? kNoneType : (*exprs.rbegin())->GetType());
   }
   bool VisitRecord(const std::string& type_id,
-                   const std::vector<FieldValue>& field_values) override {
+                   const std::vector<FieldValue>& field_values,
+                   const Expression& exp) override {
     return SetType(type_id);
   }
   bool VisitArray(const std::string& type_id, const Expression& size,

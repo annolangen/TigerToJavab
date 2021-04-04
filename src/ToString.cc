@@ -108,9 +108,9 @@ public:
     os_ << ":=";
     return expr.Accept(*this);
   }
-  bool VisitFunctionCall(
-      const std::string& id,
-      const std::vector<std::shared_ptr<Expression>>& args) override {
+  bool VisitFunctionCall(const std::string& id,
+                         const std::vector<std::shared_ptr<Expression>>& args,
+                         const Expression& exp) override {
     os_ << id << "(";
     Join(args, ", ");
     os_ << ")";
@@ -124,7 +124,8 @@ public:
     return true;
   }
   bool VisitRecord(const std::string& type_id,
-                   const std::vector<FieldValue>& field_values) override {
+                   const std::vector<FieldValue>& field_values,
+                   const Expression& exp) override {
     os_ << "{" << (field_values | join(", ")) << "}";
     return true;
   }
