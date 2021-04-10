@@ -187,7 +187,7 @@ struct TypeSetter : public ExpressionVisitor, LValueVisitor {
 void Expression::SetNameSpacesBelow(Expression& root) {
   for (auto* d : kTypeDecls) kBuiltInTypes[d->Id()] = d;
   AddProc("print", {{"s", "string"}});
-  AddProc("print", {{"i", "int"}});
+  AddProc("printi", {{"i", "int"}});
   AddProc("flush", {});
   AddFun("getchar", {}, "string");
   AddFun("ord", {{"s", "string"}}, "int");

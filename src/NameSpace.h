@@ -18,7 +18,7 @@ public:
   D& operator[](const std::string& key) { return scope_[key]; }
 
   // Returns bound value from latest scope where the given key is bound.
-  std::optional<D> Lookup(std::string key) const {
+  std::optional<D> Lookup(const std::string& key) const {
     for (const NameSpace* i = this; i != nullptr; i = i->next_) {
       if (auto p = i->scope_.find(key); p != i->scope_.end()) return p->second;
     }

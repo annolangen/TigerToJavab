@@ -3,6 +3,7 @@
 #include "instruction.h"
 #include <cassert>
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 namespace {
@@ -10,18 +11,25 @@ using emit::Invocable;
 using emit::Program;
 using emit::Pushable;
 
+bool CheckFunctionArgs(const Declaration& declaration,
+                       const std::vector<std::shared_ptr<Expression>>& args) {
+  return true;
+}
+
 class CompileExpressionVisitor : public ExpressionVisitor {
 public:
   CompileExpressionVisitor(Program& program, std::ostream& main_os)
       : program_(program) {
     instruction_streams_.push_back(&main_os);
   }
-
   bool VisitStringConstant(const std::string& text) override {
     pushables_.push_back(program_.DefineStringConstant(text));
     return true;
   }
-  bool VisitIntegerConstant(int value) override { return true; }
+  bool VisitIntegerConstant(int value) override {
+    pushables_.push_back(program_.DefineIntegerConstant(value));
+    return true;
+  }
   bool VisitNil() override { return true; }
   bool VisitLValue(const LValue& value) override { return true; }
   bool VisitNegated(const Expression& value) override {
@@ -37,24 +45,22 @@ public:
   bool VisitFunctionCall(const std::string& id,
                          const std::vector<std::shared_ptr<Expression>>& args,
                          const Expression& exp) override {
+    auto d = exp.GetNonTypeNameSpace().Lookup(id);
+    if (!d) {
+      std::cerr << "No declaration for function " << id << std::endl;
+      return false;
+    }
+    if (!CheckFunctionArgs(**d, args)) return false;
+
     // save the size of pushables for later - will make argument counting
     // easier.
     for (const auto& a : args) a->Accept(*this);
 
-    if (id == "print") {
-      // hard coding for now to get something, eventually be an unordered set of
-      // the stdlib functions
-      if (auto f = program_.LookupLibraryFunction(id); f) {
-        assert(!instruction_streams_.empty());
-        assert(!pushables_.empty());
-        auto& os = **instruction_streams_.rbegin();
-
-        const Pushable* arg = *pushables_.rbegin();
-        pushables_.pop_back();
-        arg->Push(os);
-        f->Invoke(os);
-      }
+    if (auto f = program_.LookupLibraryFunction(id); f) {
+      return EmitFunctionCall(*f, args.size());
     }
+    std::cerr << "Non-library function calls not yet implemented";
+
     return true;
   }
   bool
@@ -94,6 +100,20 @@ public:
     return std::all_of(body.begin(), body.end(),
                        [this](const auto& arg) { return arg->Accept(*this); });
   }
+
+  bool EmitFunctionCall(const Invocable& invocable, int arg_count) {
+    assert(!instruction_streams_.empty());
+    auto& os = **instruction_streams_.rbegin();
+    while (--arg_count >= 0) {
+      assert(!pushables_.empty());
+      const Pushable* arg = *pushables_.rbegin();
+      pushables_.pop_back();
+      arg->Push(os);
+    }
+    invocable.Invoke(os);
+    return true;
+  }
+
   Program& program_;
   std::vector<const Pushable*> pushables_;
   std::vector<std::ostream*> instruction_streams_;
