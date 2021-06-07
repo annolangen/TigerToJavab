@@ -147,9 +147,9 @@ public:
     value.Accept(l_value_visitor);
     return emit(out_) << ExprVisitorPair{" expr", expr, *this} << "}";
   }
-  bool VisitFunctionCall(
-      const std::string& id,
-      const std::vector<std::shared_ptr<Expression>>& args) override {
+  bool VisitFunctionCall(const std::string& id,
+                         const std::vector<std::shared_ptr<Expression>>& args,
+                         const Expression& exp) override {
     return emit(out_) << "FunctionCall{" << KVPair{"id", id} << " "
                       << Join("arg", args) << "}";
   }
@@ -158,7 +158,8 @@ public:
     return emit(out_) << "Block{" << Join("expr", exprs) << "}";
   }
   bool VisitRecord(const std::string& type_id,
-                   const std::vector<FieldValue>& field_values) override {
+                   const std::vector<FieldValue>& field_values,
+                   const Expression& exp) override {
     emit(out_) << "Record{";
     const char* sep = "";
     for (const auto& f : field_values) {

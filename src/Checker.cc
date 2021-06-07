@@ -7,8 +7,8 @@
 
 namespace {
 using Errors = std::vector<std::string>;
-using CheckerBuilder = std::function<std::unique_ptr<ExpressionVisitor>(
-    const Expression&, Errors&)>;
+using CheckerBuilder =
+    std::function<std::unique_ptr<ExpressionVisitor>(Errors&)>;
 
 struct Emitter : public std::ostringstream {
   Emitter(Errors& v) : errors(v) {}
@@ -25,11 +25,11 @@ struct Checker : public StoppingExpressionVisitor {
 // Record literal field names, expression types, and the order
 // thereof must exactly match those of the given record type (2.3)
 struct RecordFieldChecker : Checker {
-  RecordFieldChecker(const Expression& e, Errors& errors)
-      : expr_(e), Checker(errors) {}
+  RecordFieldChecker(Errors& errors) : Checker(errors) {}
   bool VisitRecord(const std::string& type_id,
-                   const std::vector<FieldValue>& field_values) override {
-    if (auto d = expr_.GetTypeNameSpace().Lookup(type_id); !d) {
+                   const std::vector<FieldValue>& field_values,
+                   const Expression& exp) override {
+    if (auto d = exp.GetTypeNameSpace().Lookup(type_id); !d) {
       emit() << "Unknown record type " << type_id;
     } else if (auto t = (*d)->GetType(); !t) {
       emit() << "Internal error: missing RHS for type declaration " << type_id;
@@ -38,7 +38,7 @@ struct RecordFieldChecker : Checker {
     } else if (auto record_fields = (*r)->Fields();
                field_values.size() != record_fields.size()) {
       emit() << "Field counts differ for " << type_id << " " << **t << " and "
-             << expr_;
+             << exp;
     } else {
       for (int i = field_values.size(); --i >= 0;) {
         if (auto id = field_values[i].id; id != record_fields[i].id) {
@@ -54,8 +54,6 @@ struct RecordFieldChecker : Checker {
     }
     return false;
   }
-
-  const Expression& expr_;
 };
 
 bool IsPrimitive(const std::string& type) {
@@ -65,8 +63,7 @@ bool IsPrimitive(const std::string& type) {
 // Binary operators >, <, >=, and <= may be either both integer or both string
 // (2.5). Operators & and | are lazy logical operators on integers (2.5)
 struct BinaryOpChecker : Checker {
-  BinaryOpChecker(const Expression& e, Errors& errors)
-      : expr_(e), Checker(errors) {}
+  BinaryOpChecker(Errors& errors) : Checker(errors) {}
   bool VisitBinary(const Expression& left, BinaryOp op,
                    const Expression& right) override {
     switch (op) {
@@ -106,13 +103,11 @@ struct BinaryOpChecker : Checker {
       emit() << "Operand type for " << op << " must be int, but got " << type;
     }
   }
-  const Expression& expr_;
 };
 
 // Conditionals must evaluate to integers (2.8)
 struct ConditionalChecker : Checker {
-  ConditionalChecker(const Expression& e, Errors& errors)
-      : expr_(e), Checker(errors) {}
+  ConditionalChecker(Errors& errors) : Checker(errors) {}
   bool VisitIfThen(const Expression& condition, const Expression&) override {
     return CheckInt(condition);
   }
@@ -131,14 +126,10 @@ struct ConditionalChecker : Checker {
     }
     return false;
   }
-
-  const Expression& expr_;
 };
 
 #define CHECK_BUILDER(C)                                                       \
-  [](const Expression& exp, Errors& errors) {                                  \
-    return std::make_unique<C>(exp, errors);                                   \
-  }
+  [](Errors& errors) { return std::make_unique<C>(errors); }
 
 std::vector<CheckerBuilder> kCheckerBuilders = {
     CHECK_BUILDER(RecordFieldChecker),
@@ -149,7 +140,7 @@ std::vector<CheckerBuilder> kCheckerBuilders = {
 void CheckBelow(const Expression& parent, Errors& errors,
                 std::vector<CheckerBuilder>& checker_builders) {
   for (auto f : checker_builders) {
-    auto checker = f(parent, errors);
+    auto checker = f(errors);
     parent.Accept(*checker);
   }
   for (auto* n : parent.Children()) {

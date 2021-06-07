@@ -19,7 +19,8 @@ public:
   }
   virtual bool
   VisitFunctionCall(const std::string& id,
-                    const std::vector<std::shared_ptr<Expression>>& args) {
+                    const std::vector<std::shared_ptr<Expression>>& args,
+                    const Expression& exp) {
     return false;
   }
   virtual bool
@@ -27,7 +28,8 @@ public:
     return false;
   }
   virtual bool VisitRecord(const std::string& type_id,
-                           const std::vector<FieldValue>& field_values) {
+                           const std::vector<FieldValue>& field_values,
+                           const Expression& exp) {
     return false;
   }
   virtual bool VisitArray(const std::string& type_id, const Expression& size,
