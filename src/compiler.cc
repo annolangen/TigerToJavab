@@ -3,6 +3,7 @@
 #include "instruction.h"
 #include <cassert>
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 namespace {
@@ -54,7 +55,9 @@ public:
         arg->Push(os);
         f->Invoke(os);
       }
+      return true;
     }
+    std::cout << "Compilation not yet implemented for " << id << std::endl;
     return true;
   }
   bool
