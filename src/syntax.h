@@ -1,4 +1,5 @@
 #pragma once
+#include "Token.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -14,7 +15,7 @@ struct RecordField {
   std::string id;
 };
 struct ArrayElement {
-  std::unique_pre<LValue> l_value;
+  std::unique_ptr<LValue> l_value;
   std::unique_ptr<Expr> expr;
 };
 using StringConstant = std::string;
@@ -33,7 +34,7 @@ struct Assignment {
 };
 using Parenthesized = std::vector<std::unique_ptr<Expr>>;
 struct FunctionCall {
-  std::string id;
+  Identifier id;
   Parenthesized arguments;
 };
 struct FieldAssignment {
@@ -78,9 +79,10 @@ struct Let {
   std::unique_ptr<Expr> body;
 };
 using Expr =
-    std::variant<StringConstant, IntegerConstant, Nil, LValue, Negated, Binary,
-                 Assignment, FunctionCall, Parenthesized, RecordLiteral,
-                 ArrayLiteral, IfThen, IfThenElse, While, For, Break, Let>;
+    std::variant<StringConstant, IntegerConstant, Nil, LValue,
+                 Negated, Binary, Assignment, FunctionCall, Parenthesized,
+                 RecordLiteral, ArrayLiteral, IfThen, IfThenElse, While, For,
+                 Break, Let>;
 
 // Returns Expression parsed using yylex and yytext.
 std::unique_ptr<Expr> Parse();

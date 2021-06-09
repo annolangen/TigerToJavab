@@ -1,7 +1,7 @@
 #pragma once
 
 enum Token {
-  EOF = 0,
+  T_EOF = 0,
   AND,
   ARRAY,
   ASSIGN,
