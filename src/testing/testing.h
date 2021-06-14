@@ -1,10 +1,10 @@
 #pragma once
-#include "../Expression.h"
+#include "../syntax.h"
 
 namespace testing {
 
-std::shared_ptr<Expression> Parse(const std::string& text);
-std::shared_ptr<Expression> ParseFile(const std::string& file_name);
+std::unique_ptr<syntax::Expr> Parse(const std::string& text);
+std::unique_ptr<syntax::Expr> ParseFile(const std::string& file_name);
 
 // Returns output of executing code in /tmp/Main.class with Std.class in
 // classpath.

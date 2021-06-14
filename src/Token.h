@@ -1,6 +1,6 @@
 #pragma once
 
-enum Token {
+enum class Token {
   END_OF_FILE = 0,
   AND,
   ARRAY,
@@ -46,7 +46,7 @@ enum Token {
   VAR,
   WHILE
 };
-
-extern int yylex();
+#define YY_DECL Token yylex()
+extern YY_DECL;
 extern char* yytext;
-extern int yylen;
+extern int yyleng;

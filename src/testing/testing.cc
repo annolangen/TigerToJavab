@@ -1,12 +1,14 @@
 #define _POSIX_C_SOURCE 2
 #include "testing.h"
-#include "../driver.h"
+#include "syntax_insertion.h"
 #include <cstdio>
 #include <fstream>
 #include <iostream>
 
+extern FILE* yyin;
+
 namespace testing {
-std::shared_ptr<Expression> Parse(const std::string& text) {
+std::unique_ptr<syntax::Expr> Parse(const std::string& text) {
   std::ofstream myfile;
   std::string file_name = "/tmp/testing.tig";
   myfile.open(file_name);
@@ -15,10 +17,16 @@ std::shared_ptr<Expression> Parse(const std::string& text) {
   return ParseFile(file_name);
 }
 
-std::shared_ptr<Expression> ParseFile(const std::string& file_name) {
-  Driver driver;
-  if (driver.parse(file_name) == 0) return driver.result;
-  return std::make_shared<Nil>();
+std::unique_ptr<syntax::Expr> ParseFile(const std::string& file_name) {
+  yyin = fopen(file_name.c_str(), "r");
+  if (!yyin) {
+    std::perror("File opening failed");
+    return {};
+  }
+  struct OnExit {
+    ~OnExit() { std::fclose(yyin); }
+  } on_exit;
+  return syntax::Parse();
 }
 
 std::string RunJava() {

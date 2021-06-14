@@ -27,7 +27,9 @@ class Parenthesized;
 using Identifier = std::string;
 using LValue = std::variant<Identifier, RecordField, ArrayElement>;
 
-using StringConstant = std::string;
+struct StringConstant {
+  std::string value;
+};
 using IntegerConstant = int;
 struct Nil {};
 using Expr =
