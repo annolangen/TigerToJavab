@@ -1,8 +1,7 @@
 %{ /* -*- C++ -*- */
-# include <cerrno>
-# include <climits>
-# include <cstdlib>
-# include "Token.h"
+#include "Token.h"
+#include <cstdlib>
+#include <iostream>
 
 // Work around an incompatibility in flex (at least versions
 // 2.5.31 through 2.5.33): it generates code that does
@@ -62,9 +61,9 @@ string \"[^\"]*\"
 "var"	 return Token::VAR;
 "while"	 return Token::WHILE;
 
-{int}    return Token::NUMBER(n, loc);
+{int}    return Token::NUMBER;
 {string} return Token::STRING_CONSTANT;
 {id}     return Token::IDENTIFIER;
 .        std::cerr << "invalid character '" << yytext <<"'";
-<<EOF>>  return Token::EOF;
+<<EOF>>  return Token::END_OF_FILE;
 %%

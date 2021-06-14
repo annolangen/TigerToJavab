@@ -8,7 +8,7 @@ compiler. The following list of packages is known to provide a working
 environment on Debian derived systems.
 
 ```
-sudo apt install clang make automake bison++ flex default-jdk-headless
+sudo apt install clang make automake flex default-jdk-headless
 ```
 
 In a freshly cloned repository you need to create initial Makefiles by

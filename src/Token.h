@@ -1,7 +1,7 @@
 #pragma once
 
 enum Token {
-  T_EOF = 0,
+  END_OF_FILE = 0,
   AND,
   ARRAY,
   ASSIGN,

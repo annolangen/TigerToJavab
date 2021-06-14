@@ -7,9 +7,33 @@
 #include <vector>
 
 namespace syntax {
-class Expr;   // forward declaration
-class LValue; // forward declaration
+// forward declarations
+class RecordField;
+class ArrayElement;
+class Negated;
+class Binary;
+class Assignment;
+class FunctionCall;
+class RecordLiteral;
+class ArrayLiteral;
+class IfThen;
+class IfThenElse;
+class While;
+class For;
+class Break;
+class Let;
+class Parenthesized;
+
 using Identifier = std::string;
+using LValue = std::variant<Identifier, RecordField, ArrayElement>;
+
+using StringConstant = std::string;
+using IntegerConstant = int;
+struct Nil {};
+using Expr =
+    std::variant<StringConstant, IntegerConstant, Nil, LValue, Negated, Binary,
+                 Assignment, FunctionCall, RecordLiteral, ArrayLiteral, IfThen,
+                 IfThenElse, While, For, Break, Let, Parenthesized>;
 struct RecordField {
   std::unique_ptr<LValue> l_value;
   std::string id;
@@ -18,11 +42,9 @@ struct ArrayElement {
   std::unique_ptr<LValue> l_value;
   std::unique_ptr<Expr> expr;
 };
-using StringConstant = std::string;
-using IntegerConstant = int;
-struct Nil {};
-using LValue = std::variant<Identifier, RecordField, ArrayElement>;
-using Negated = Expr;
+struct Negated {
+  std::unique_ptr<Expr> expr;
+};
 struct Binary {
   std::unique_ptr<Expr> left;
   Token op;
@@ -32,10 +54,12 @@ struct Assignment {
   std::unique_ptr<LValue> l_value;
   std::unique_ptr<Expr> expr;
 };
-using Parenthesized = std::vector<std::unique_ptr<Expr>>;
+struct Parenthesized {
+  std::vector<std::unique_ptr<Expr>> exprs;
+};
 struct FunctionCall {
   Identifier id;
-  Parenthesized arguments;
+  std::vector<std::unique_ptr<Expr>> arguments;
 };
 struct FieldAssignment {
   std::string id;
@@ -52,7 +76,7 @@ struct ArrayLiteral {
 };
 struct IfThen {
   std::unique_ptr<Expr> condition;
-  std::unique_ptr<Expr> then;
+  std::unique_ptr<Expr> then_expr;
 };
 struct IfThenElse {
   std::unique_ptr<Expr> condition;
@@ -70,19 +94,36 @@ struct For {
   std::unique_ptr<Expr> body;
 };
 struct Break {};
-struct Declaration {
+struct VariableDeclaration {
   std::string id;
   std::unique_ptr<Expr> value;
+  std::optional<std::string> type_id;
 };
-struct Let {
-  std::vector<Declaration> declarations;
+struct TypeField {
+  std::string id;
+  std::string type_id;
+};
+using TypeFields = std::vector<TypeField>;
+struct ArrayType {
+  std::string element_type_id;
+};
+struct FunctionDeclaration {
+  std::string id;
+  TypeFields parameter;
   std::unique_ptr<Expr> body;
+  std::optional<std::string> type_id;
 };
-using Expr =
-    std::variant<StringConstant, IntegerConstant, Nil, LValue,
-                 Negated, Binary, Assignment, FunctionCall, Parenthesized,
-                 RecordLiteral, ArrayLiteral, IfThen, IfThenElse, While, For,
-                 Break, Let>;
+using Type = std::variant<Identifier, TypeFields, ArrayType>;
+struct TypeDeclaration {
+  std::string id;
+  Type value;
+};
+using Declaration =
+    std::variant<TypeDeclaration, VariableDeclaration, FunctionDeclaration>;
+struct Let {
+  std::vector<Declaration> declaration;
+  std::vector<std::unique_ptr<Expr>> body;
+};
 
 // Returns Expression parsed using yylex and yytext.
 std::unique_ptr<Expr> Parse();

@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-tc_srcs = BinaryOp.cc Expression.cc ToString.cc DebugString.cc Checker.cc parser.yy scanner.ll driver.cc emit.cc compiler.cc
+tc_srcs = BinaryOp.cc Expression.cc ToString.cc DebugString.cc Checker.cc emit.cc compiler.cc syntax.cc token.ll
 
 bin_PROGRAMS = tc
 tc_SOURCES = tc.cc $(tc_srcs)
