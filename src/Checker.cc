@@ -1,14 +1,14 @@
 #include "Checker.h"
-#include "StoppingExpressionVisitor.h"
-#include "ToString.h"
-#include "syntax_nodes.h"
+
 #include <functional>
 #include <sstream>
 
+#include "ToString.h"
+#include "syntax.h"
+#include "syntax_insertion.h"
+
 namespace {
 using Errors = std::vector<std::string>;
-using CheckerBuilder =
-    std::function<std::unique_ptr<ExpressionVisitor>(Errors&)>;
 
 struct Emitter : public std::ostringstream {
   Emitter(Errors& v) : errors(v) {}
@@ -16,8 +16,8 @@ struct Emitter : public std::ostringstream {
   Errors& errors;
 };
 
-struct Checker : public StoppingExpressionVisitor {
-  Checker(Errors& errors) : errors_(errors) {}
+template <class... O>
+struct Checker : TreeVisitor<Checker<O...>, O...> {
   Emitter emit() { return {errors_}; }
   Errors& errors_;
 };
@@ -25,7 +25,12 @@ struct Checker : public StoppingExpressionVisitor {
 // Record literal field names, expression types, and the order
 // thereof must exactly match those of the given record type (2.3)
 struct RecordFieldChecker : Checker {
-  RecordFieldChecker(Errors& errors) : Checker(errors) {}
+  RecordFieldChecker(Errors& errors)
+      : Checker(
+            ExpressionVisitor{
+
+            },
+            errors) {}
   bool VisitRecord(const std::string& type_id,
                    const std::vector<FieldValue>& field_values,
                    const Expression& exp) override {
@@ -67,19 +72,19 @@ struct BinaryOpChecker : Checker {
   bool VisitBinary(const Expression& left, BinaryOp op,
                    const Expression& right) override {
     switch (op) {
-    case kGreaterThan:
-    case kLessThan:
-    case kNotGreaterThan:
-    case kNotLessThan:
-      CheckComparison(left.GetType(), right.GetType(), op);
-      break;
-    case kAnd:
-    case kOr:
-      CheckInt(left.GetType(), op);
-      CheckInt(right.GetType(), op);
-      break;
-    default:
-      break;
+      case kGreaterThan:
+      case kLessThan:
+      case kNotGreaterThan:
+      case kNotLessThan:
+        CheckComparison(left.GetType(), right.GetType(), op);
+        break;
+      case kAnd:
+      case kOr:
+        CheckInt(left.GetType(), op);
+        CheckInt(right.GetType(), op);
+        break;
+      default:
+        break;
     }
     return false;
   }
@@ -128,7 +133,7 @@ struct ConditionalChecker : Checker {
   }
 };
 
-#define CHECK_BUILDER(C)                                                       \
+#define CHECK_BUILDER(C) \
   [](Errors& errors) { return std::make_unique<C>(errors); }
 
 std::vector<CheckerBuilder> kCheckerBuilders = {
@@ -148,10 +153,10 @@ void CheckBelow(const Expression& parent, Errors& errors,
   }
 }
 
-} // namespace
+}  // namespace
 
-Errors ListErrors(const Expression& root) {
+Errors ListErrors(const Expr& root) {
   Errors errors;
-  CheckBelow(root, errors, kCheckerBuilders);
+  // CheckBelow(root, errors, kCheckerBuilders);
   return errors;
 }

@@ -1,5 +1,6 @@
-#include "ScopedMap.h"
-#include "testing/catch.h"
+#include "catch2/catch_test_macros.hpp"
+#include "scoped_map.h"
+
 namespace {
 SCENARIO("ScopedMap handles binding in scopes", "[ScopedMap]") {
   GIVEN("A ScopedMap<int>") {
@@ -28,4 +29,4 @@ SCENARIO("ScopedMap handles binding in scopes", "[ScopedMap]") {
     }
   }
 }
-} // namespace
+}  // namespace

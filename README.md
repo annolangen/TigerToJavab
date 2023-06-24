@@ -1,4 +1,5 @@
 # TigerToJavab
+
 a personal extension/modification on cs350, but done with the standard library and going to java bytecode
 
 ## Getting Started
@@ -8,15 +9,14 @@ compiler. The following list of packages is known to provide a working
 environment on Debian derived systems.
 
 ```
-sudo apt install clang make automake flex default-jdk-headless
+sudo apt install clang make cmake bison flex default-jdk-headless
 ```
 
-In a freshly cloned repository you need to create initial Makefiles by
-executing in the root directory
+To build from scratch, run the following commands:
 
 ```
-autoreconf --install --force
-./configure
+cmake -B build -S .
+make -C build
 ```
 
 From that point forward `make` builds the compiler and `make check` runs

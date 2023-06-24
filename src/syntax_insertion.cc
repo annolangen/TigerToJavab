@@ -1,19 +1,23 @@
 #include "syntax_insertion.h"
+
 #include <functional>
 #include <iostream>
 
-template <class T> struct Join {
+template <class T>
+struct Join {
   const std::vector<T>& v;
   std::string_view separator;
 };
 struct JoinBuilder {
   std::string_view separator;
-  template <class T> Join<T> join(const std::vector<T>& v) {
+  template <class T>
+  Join<T> join(const std::vector<T>& v) {
     return Join<T>{v, separator};
   }
 };
 JoinBuilder with(std::string_view separator) { return JoinBuilder{separator}; }
-template <class T> std::ostream& MaybeDeref(std::ostream& os, const T& e) {
+template <class T>
+std::ostream& MaybeDeref(std::ostream& os, const T& e) {
   return os << e;
 }
 template <>
@@ -83,7 +87,7 @@ std::ostream& operator<<(std::ostream& os, const syntax::IfThenElse& i) {
 std::ostream& operator<<(std::ostream& os, const syntax::Let& l) {
   os << "let\n";
   for (const auto& d : l.declaration) {
-    os << d << "\n";
+    os << *d << "\n";
   }
   return os << "in " << with("; ").join(l.body) << "end\n";
 }
@@ -109,58 +113,6 @@ std::ostream& operator<<(std::ostream& os, const syntax::RecordLiteral& r) {
 std::ostream& operator<<(std::ostream& os, const syntax::StringConstant& s) {
   return os << '"' << s.value << '"';
 }
-std::ostream& operator<<(std::ostream& os, Token t) {
-  switch (t) {
-  case Token::AND:
-    return os << "&";
-  case Token::LPAREN:
-    return os << "(";
-  case Token::RPAREN:
-    return os << ")";
-  case Token::LBRACE:
-    return os << "{";
-  case Token::RBRACE:
-    return os << "}";
-  case Token::STAR:
-    return os << "*";
-  case Token::PLUS:
-    return os << "+";
-  case Token::COMMA:
-    return os << ",";
-  case Token::MINUS:
-    return os << "-";
-  case Token::DOT:
-    return os << ".";
-  case Token::SLASH:
-    return os << "/";
-  case Token::SEMICOLON:
-    return os << ";";
-  case Token::COLON:
-    return os << ":";
-  case Token::ASSIGN:
-    return os << ":=";
-  case Token::LT:
-    return os << "<";
-  case Token::LE:
-    return os << "<=";
-  case Token::NE:
-    return os << "<>";
-  case Token::EQUAL:
-    return os << "=";
-  case Token::GT:
-    return os << ">";
-  case Token::GE:
-    return os << ">=";
-  case Token::LBRACKET:
-    return os << "[";
-  case Token::RBRACKET:
-    return os << "]";
-  case Token::OR:
-    return os << "|";
-  default:
-    return os << "TOKEN(" << static_cast<int>(t) << ")";
-  }
-}
 std::ostream& operator<<(std::ostream& os, const syntax::Type& t) {
   std::visit([&os](auto&& v) { os << v; }, t);
   return os;
@@ -182,4 +134,9 @@ std::ostream& operator<<(std::ostream& os,
 }
 std::ostream& operator<<(std::ostream& os, const syntax::While& w) {
   return os << "while " << *w.condition << " do " << *w.body;
+}
+
+std::ostream& operator<<(std::ostream& os,
+                         const std::unique_ptr<syntax::LValue>& lvp) {
+  return os << *lvp;
 }

@@ -1,6 +1,8 @@
 #pragma once
-#include "syntax.h"
 #include <ostream>
+
+#include "syntax.h"
+
 std::ostream& operator<<(std::ostream& os, const syntax::ArrayElement&);
 std::ostream& operator<<(std::ostream& os, const syntax::ArrayLiteral&);
 std::ostream& operator<<(std::ostream& os, const syntax::ArrayType&);
@@ -23,10 +25,12 @@ std::ostream& operator<<(std::ostream& os, const syntax::Parenthesized&);
 std::ostream& operator<<(std::ostream& os, const syntax::RecordField&);
 std::ostream& operator<<(std::ostream& os, const syntax::RecordLiteral&);
 std::ostream& operator<<(std::ostream& os, const syntax::StringConstant&);
-std::ostream& operator<<(std::ostream& os, const Token);
 std::ostream& operator<<(std::ostream& os, const syntax::Type&);
 std::ostream& operator<<(std::ostream& os, const syntax::TypeDeclaration&);
 std::ostream& operator<<(std::ostream& os, const syntax::TypeField&);
 std::ostream& operator<<(std::ostream& os, const syntax::TypeFields&);
 std::ostream& operator<<(std::ostream& os, const syntax::VariableDeclaration&);
 std::ostream& operator<<(std::ostream& os, const syntax::While&);
+
+std::ostream& operator<<(std::ostream& os,
+                         const std::unique_ptr<syntax::LValue>&);

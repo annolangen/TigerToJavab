@@ -1,7 +1,8 @@
 #pragma once
-#include "Expression.h"
 #include <string>
 #include <vector>
+
+#include "syntax.h"
 // Checks Tiger program constraints statically. Specifically:
 // - Record literal field names, expression types, and the order
 //   thereof must exactly match those of the given record type (2.3)
@@ -42,4 +43,4 @@
 // - (3.3) [Common sense indicates that values of a called function
 //   should have compatible types]
 
-std::vector<std::string> ListErrors(const Expression& e);
+std::vector<std::string> ListErrors(const syntax::Expr& e);

@@ -1,22 +1,25 @@
-#ifndef DRIVER_HH
-#define DRIVER_HH
-#include "Expression.h"
-#include "parser.hh"
+#pragma once
+
 #include <map>
 #include <string>
+
+#include "parser.hh"
+#include "syntax.h"
+
 // Tell Flex the lexer's prototype ...
 #define YY_DECL yy::Parser::symbol_type yylex(Driver& driver)
 // ... and declare it for the parser's sake.
 YY_DECL;
-// Conducting the whole scanning and parsing of Calc++.
+
+// Conducting the whole scanning and parsing of Tiger compiler.
 class Driver {
-public:
+ public:
   Driver();
   virtual ~Driver();
 
   std::map<std::string, int> variables;
 
-  std::shared_ptr<Expression> result;
+  std::unique_ptr<syntax::Expr> result;
   // Handling the scanner.
   void scan_begin();
   void scan_end();
@@ -33,4 +36,3 @@ public:
   void error(const yy::location& l, const std::string& m);
   void error(const std::string& m);
 };
-#endif // ! DRIVER_HH
