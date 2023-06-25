@@ -90,7 +90,7 @@ std::ostream& Append(const syntax::Expr& e, DebugStringOptions options,
           [&](const syntax::Let& l) {
             DebugStringOptions body_options = options;
             body_options.indent += options.indent;
-            out << "let " << std::endl;
+            out << "let" << std::endl;
             for (const auto& decl : l.declaration) {
               out << body_options.indent << Str{*decl, options} << std::endl;
             }

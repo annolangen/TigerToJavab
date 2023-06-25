@@ -15,6 +15,7 @@
 
 // The location of the current token.
 static yy::location loc;
+
 extern "C" int fileno(FILE *);
 %}
 %option noyywrap nounput batch debug noinput
@@ -87,12 +88,17 @@ string \"[^\"]*\"
   return yy::Parser::make_NUMBER(n, loc);
 }
 {string}   return yy::Parser::make_STRING_CONSTANT(yytext, loc);
-{id}       return yy::Parser::make_IDENTIFIER(yytext, loc);
+{id}       {
+  return Driver::kTypeIds.contains(yytext)
+    ? yy::Parser::make_TYPE_ID(yytext, loc)
+    : yy::Parser::make_IDENTIFIER(yytext, loc);
+}
 .          driver.error(loc, std::string("invalid character '")+yytext+"'");
 <<EOF>>    return yy::Parser::make_EOF(loc);
 %%
 
 void Driver::scan_begin() {
+  loc.initialize();
   yy_flex_debug = trace_scanning;
   if (file.empty() || file == "-") {
     yyin = stdin;

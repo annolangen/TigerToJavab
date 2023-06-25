@@ -6,9 +6,14 @@
 #include <variant>
 #include <vector>
 
-#include "BinaryOp.h"
+#include "binary_op.h"
 
+// Types and helper functions for the abstract syntax tree from
+// http://www.cs.columbia.edu/~sedwards/classes/2002/w4115/tiger.pdf.
 namespace syntax {
+// Abstract syntax node types are a mix of structs, std::variants, and
+// type aliases.
+
 // forward declarations
 class RecordField;
 class ArrayElement;
