@@ -6,7 +6,6 @@
 #include <iostream>
 
 #include "../driver.h"
-#include "../syntax_insertion.h"
 
 extern FILE* yyin;
 

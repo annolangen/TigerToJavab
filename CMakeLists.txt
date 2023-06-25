@@ -20,7 +20,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(CMAKE_CXX_FLAGS "-Werror -std=c++20 -g3")
 
 # Define library for executable and tests
-add_library(tc_lib src/driver.cc src/emit.cc src/syntax_insertion.cc src/binary_op.cc src/symbol_table.cc src/debug_string.cc)
+add_library(tc_lib src/driver.cc src/emit.cc src/binary_op.cc src/symbol_table.cc src/debug_string.cc)
 
 # Add the executable
 add_executable(tc ${BISON_MyParser_OUTPUTS} ${FLEX_MyScanner_OUTPUTS} src/tc.cc)

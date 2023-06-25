@@ -237,15 +237,7 @@ bool VisitChildren(const Parenthesized& v, F&& f) {
 }
 template <class F>
 bool VisitChildren(const LValue& v, F&& f) {
-  switch (v.index()) {
-    case 1:
-      return VisitChildren(std::get<1>(v), f);
-    case 2:
-      return VisitChildren(std::get<2>(v), f);
-    default:
-      return true;
-  }
-  // return std::visit([&f](auto e) -> bool { return VisitChildren(e, f); }, v);
+  return std::visit([&f](const auto& e) { return VisitChildren(e, f); }, v);
 }
 template <class F>
 bool VisitChildren(const std::unique_ptr<LValue>& v, F&& f) {
@@ -253,65 +245,15 @@ bool VisitChildren(const std::unique_ptr<LValue>& v, F&& f) {
 }
 template <class F>
 bool VisitChildren(const Expr& v, F&& f) {
-  switch (v.index()) {
-    case 3:
-      return VisitChildren(*std::get<3>(v), f);
-    case 4:
-      return f(*std::get<4>(v).expr);
-    case 5:
-      return VisitChildren(std::get<5>(v), f);
-    case 6:
-      return VisitChildren(std::get<6>(v), f);
-    case 7:
-      return VisitChildren(std::get<7>(v), f);
-    case 8:
-      return VisitChildren(std::get<8>(v), f);
-    case 9:
-      return VisitChildren(std::get<9>(v), f);
-    case 10:
-      return VisitChildren(std::get<10>(v), f);
-    case 11:
-      return VisitChildren(std::get<11>(v), f);
-    case 12:
-      return VisitChildren(std::get<12>(v), f);
-    case 13:
-      return VisitChildren(std::get<13>(v), f);
-    case 14:
-      return VisitChildren(std::get<14>(v), f);
-    case 15:
-      return VisitChildren(std::get<15>(v), f);
-    case 16:
-      return VisitChildren(std::get<16>(v), f);
-    default:
-      return true;
-  }
-  // return std::visit([&f](auto e) -> bool { return VisitChildren(e, f); }, v);
+  return std::visit([&f](const auto& e) { return VisitChildren(e, f); }, v);
 }
 template <class F>
 bool VisitChildren(const Type& v, F&& f) {
-  switch (v.index()) {
-    case 1:
-      return VisitChildren(std::get<1>(v), f);
-    case 2:
-      return VisitChildren(std::get<2>(v), f);
-    default:
-      return true;
-  }
-  // return std::visit([&f](auto e) -> bool { return VisitChildren(e, f); }, v);
+  return std::visit([&f](const auto& e) { return VisitChildren(e, f); }, v);
 }
 template <class F>
 bool VisitChildren(const Declaration& v, F&& f) {
-  switch (v.index()) {
-    case 0:
-      return VisitChildren(std::get<0>(v), f);
-    case 1:
-      return VisitChildren(std::get<1>(v), f);
-    case 2:
-      return VisitChildren(std::get<2>(v), f);
-    default:
-      return true;
-  }
-  // return std::visit([&f](auto e) -> bool { return VisitChildren(e, f); }, v);
+  return std::visit([&f](const auto& e) { return VisitChildren(e, f); }, v);
 }
 template <class F>
 bool VisitChildren(const VariableDeclaration& v, F&& f) {
