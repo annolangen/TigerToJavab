@@ -2,7 +2,10 @@
 #include <string>
 #include <vector>
 
+#include "symbol_table.h"
 #include "syntax.h"
+#include "type_finder.h"
+
 // Checks Tiger program constraints statically. Specifically:
 // - Record literal field names, expression types, and the order
 //   thereof must exactly match those of the given record type (2.3)
@@ -43,4 +46,5 @@
 // - (3.3) [Common sense indicates that values of a called function
 //   should have compatible types]
 
-std::vector<std::string> ListErrors(const syntax::Expr& e);
+std::vector<std::string> ListErrors(const syntax::Expr& e, const SymbolTable& t,
+                                    TypeFinder& tf);

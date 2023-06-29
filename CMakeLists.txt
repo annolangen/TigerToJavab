@@ -19,8 +19,16 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 # Set compiler flags
 set(CMAKE_CXX_FLAGS "-Werror -std=c++20 -g3")
 
+set(TESTED_FILE_STEMS checker debug_string symbol_table type_finder)
+set(TESTED_SRC_FILES "")
+set(TESTED_TEST_FILES "")
+foreach(S ${TESTED_FILE_STEMS})
+  list(APPEND TESTED_SRC_FILES "src/${S}.cc")
+  list(APPEND TESTED_TEST_FILES "src/${S}_test.cc")
+endforeach()
+
 # Define library for executable and tests
-add_library(tc_lib src/driver.cc src/emit.cc src/binary_op.cc src/symbol_table.cc src/debug_string.cc src/type_finder.cc)
+add_library(tc_lib src/driver.cc src/emit.cc src/binary_op.cc ${TESTED_SRC_FILES})
 
 # Add the executable
 add_executable(tc ${BISON_MyParser_OUTPUTS} ${FLEX_MyScanner_OUTPUTS} src/tc.cc)
@@ -39,7 +47,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-add_executable(tests src/debug_string_test.cc src/symbol_table_test.cc src/type_finder_test.cc ${BISON_MyParser_OUTPUTS} ${FLEX_MyScanner_OUTPUTS} src/testing/testing.cc)
+add_executable(tests ${TESTED_TEST_FILES} ${BISON_MyParser_OUTPUTS} ${FLEX_MyScanner_OUTPUTS} src/testing/testing.cc)
 target_link_libraries(tests tc_lib)
 target_link_libraries(tests Catch2::Catch2WithMain)
 

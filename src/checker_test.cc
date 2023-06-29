@@ -1,6 +1,7 @@
+#include "checker.h"
+
 #include <string_view>
 
-#include "Checker.h"
 #include "catch2/catch_test_macros.hpp"
 #include "testing/testing.h"
 
@@ -8,7 +9,13 @@ namespace {
 
 std::vector<std::string> Check(const char* text) {
   std::unique_ptr<syntax::Expr> e = testing::Parse(text);
-  return ListErrors(*e);
+  REQUIRE(e != nullptr);
+  auto st = SymbolTable::Build(*e);
+  std::vector<std::string> errors;
+  TypeFinder tf(*st, errors);
+  std::vector<std::string> checker_errors = ListErrors(*e, *st, tf);
+  errors.insert(errors.end(), checker_errors.begin(), checker_errors.end());
+  return errors;
 }
 
 bool StartsWith(std::string_view text, std::string_view prefix) {
