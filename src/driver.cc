@@ -2,8 +2,6 @@
 
 #include "parser.hh"
 
-std::unordered_set<std::string> Driver::kTypeIds = {"int", "string"};
-
 Driver::Driver() : trace_scanning(false), trace_parsing(false) {
   variables["one"] = 1;
   variables["two"] = 2;

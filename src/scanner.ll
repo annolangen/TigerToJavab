@@ -88,11 +88,7 @@ string \"[^\"]*\"
   return yy::Parser::make_NUMBER(n, loc);
 }
 {string}   return yy::Parser::make_STRING_CONSTANT(yytext, loc);
-{id}       {
-  return Driver::kTypeIds.contains(yytext)
-    ? yy::Parser::make_TYPE_ID(yytext, loc)
-    : yy::Parser::make_IDENTIFIER(yytext, loc);
-}
+{id}       return yy::Parser::make_IDENTIFIER(yytext, loc);
 .          driver.error(loc, std::string("invalid character '")+yytext+"'");
 <<EOF>>    return yy::Parser::make_EOF(loc);
 %%

@@ -23,6 +23,7 @@ using namespace syntax;
 };
 %define parse.trace
 %define parse.error verbose
+ // shift-reduce conflict avoided from https://tinyurl.com/2azc9rm8
 %code
 {
 #include "driver.h"
@@ -73,11 +74,10 @@ using namespace syntax;
   SEMICOLON ";"
 ;
 %token <std::string> IDENTIFIER "identifier"
-%token <std::string> TYPE_ID "type-id"
 %token <std::string> STRING_CONSTANT "string"
 %token <int> NUMBER "number"
 %type  <std::unique_ptr<Expr>> expr
-%type  <std::unique_ptr<LValue>> l_value
+%type  <std::unique_ptr<LValue>> l_value l_value_not_id
 %type  <std::vector<std::unique_ptr<Expr>>> expr_list expr_list_opt expr_seq expr_seq_opt
 %type  <std::vector<FieldAssignment>> field_list field_list_opt
 %type  <std::vector<std::unique_ptr<Declaration>>> declaration_list
@@ -85,8 +85,6 @@ using namespace syntax;
 %type  <Type> type
 %type  <TypeFields> type_fields_opt type_fields
 %type  <TypeField> type_field
-%type <std::string> type_intro
-
 
 %left ";";
 %left ",";
@@ -108,8 +106,12 @@ unit: expr  { driver.result = $1; }
 ;
 l_value:
   "identifier" { $$ = std::make_unique<LValue>($1); }
-| l_value "." "identifier" { $$ = std::make_unique<LValue>(RecordField{$1, $3}); }
-| l_value "[" expr "]" { $$ = std::make_unique<LValue>(ArrayElement{$1, $3}); }
+| l_value_not_id { $$ = $1; }
+;
+l_value_not_id:
+  l_value "." "identifier" { $$ = std::make_unique<LValue>(RecordField{$1, $3}); }
+| "identifier" "[" expr "]" { $$ = std::make_unique<LValue>(ArrayElement{std::make_unique<LValue>($1), $3}); }
+| l_value_not_id "[" expr "]" { $$ = std::make_unique<LValue>(ArrayElement{$1, $3}); }
 ;
 expr_list:
   expr { $$.emplace_back($1);}
@@ -136,7 +138,8 @@ expr:
   }
 | "number"    { $$ = std::make_unique<Expr>(IntegerConstant{$1}); }
 | "nil"       { $$ = std::make_unique<Expr>(Nil{}); }
-| l_value     { $$ = std::make_unique<Expr>($1); }
+| l_value_not_id { $$ = std::make_unique<Expr>($1); }
+| "identifier" { $$ = std::make_unique<Expr>(std::make_unique<LValue>($1)); }
 | "-" expr     { $$ = std::make_unique<Expr>(Negated{$2}); }
 | expr "+" expr { $$ = std::make_unique<Expr>(Binary{$1, BinaryOp::kPlus, $3}); }
 | expr "-" expr { $$ = std::make_unique<Expr>(Binary{$1, BinaryOp::kMinus, $3}); }
@@ -153,8 +156,8 @@ expr:
 | l_value ":=" expr { $$ = std::make_unique<Expr>(Assignment{std::unique_ptr<LValue>($1), $3}); }
 | "identifier" "(" expr_list_opt ")" { $$ = std::make_unique<Expr>(FunctionCall{$1, $3}); }
 | "(" expr_seq_opt ")" { $$ = std::make_unique<Expr>(Parenthesized{$2}); }
-| "type-id" "{" field_list_opt "}" { $$ = std::make_unique<Expr>(RecordLiteral{$1, $3}); }
-| "type-id" "[" expr "]" "of" expr { $$ = std::make_unique<Expr>(ArrayLiteral{$1, $3, $6}); }
+| "identifier" "{" field_list_opt "}" { $$ = std::make_unique<Expr>(RecordLiteral{$1, $3}); }
+| "identifier" "[" expr "]" "of" expr { $$ = std::make_unique<Expr>(ArrayLiteral{$1, $3, $6}); }
 | "if" expr "then" expr { $$ = std::make_unique<Expr>(IfThen{$2, $4}); }
 | "if" expr "then" expr "else" expr { $$ = std::make_unique<Expr>(IfThenElse{$2, $4, $6}); }
 | "while" expr "do" expr { $$ = std::make_unique<Expr>(While{$2, $4}); }
@@ -171,32 +174,28 @@ declaration:
 | variable_declaration { $$ = $1; }
 | function_declaration { $$ = $1; }
 ;
-type_intro:
-  "type" "identifier" {$$ = $2; Driver::kTypeIds.insert($$);}
-| "type" "type-id" {$$ = $2;}
-;
 type_declaration:
-  type_intro "=" type { $$ = std::make_unique<Declaration>(TypeDeclaration{$1, $3}); }
+  "type" "identifier" "=" type { $$ = std::make_unique<Declaration>(TypeDeclaration{$2, $4}); }
 ;
 type:
-  "type-id" { $$ = Identifier{$1}; }
+  "identifier" { $$ = Identifier{$1}; }
 | "{" type_fields_opt "}" { $$ = $2; }
-| "array" "of" "type-id" { $$ = ArrayType{$3}; }
+| "array" "of" "identifier" { $$ = ArrayType{$3}; }
 ;
 type_fields:
   type_field { $$.push_back($1); }
 | type_fields "," type_field { $$ = $1; $$.push_back($3); }
 ;
-type_field: "identifier" ":" "type-id" { $$ = {$1, $3}; }
+type_field: "identifier" ":" "identifier" { $$ = {$1, $3}; }
 ;
 type_fields_opt: %empty {} | type_fields { $$ = $1; };
 variable_declaration:
 "var" "identifier" ":=" expr { $$ = std::make_unique<Declaration>(VariableDeclaration{$2, $4}); }
-| "var" "identifier" ":" "type-id" ":=" expr { $$ = std::make_unique<Declaration>(VariableDeclaration{$2, $6, $4}); }
+| "var" "identifier" ":" "identifier" ":=" expr { $$ = std::make_unique<Declaration>(VariableDeclaration{$2, $6, $4}); }
 ;
 function_declaration:
 "function" "identifier" "(" type_fields_opt ")" "=" expr { $$ = std::make_unique<Declaration>(FunctionDeclaration{$2, $4, $7}); }
-| "function" "identifier" "(" type_fields_opt ")" ":" "type-id" "=" expr { $$ = std::make_unique<Declaration>(FunctionDeclaration{$2, $4, $9, $7}); }
+| "function" "identifier" "(" type_fields_opt ")" ":" "identifier" "=" expr { $$ = std::make_unique<Declaration>(FunctionDeclaration{$2, $4, $9, $7}); }
 ;
 %%
 void yy::Parser::error(const location_type& l, const std::string& m) {

@@ -2,7 +2,6 @@
 
 #include <map>
 #include <string>
-#include <unordered_set>
 
 #include "parser.hh"
 #include "syntax.h"
@@ -18,7 +17,6 @@ class Driver {
   Driver();
   virtual ~Driver();
 
-  static std::unordered_set<std::string> kTypeIds;
   std::map<std::string, int> variables;
 
   std::unique_ptr<syntax::Expr> result;

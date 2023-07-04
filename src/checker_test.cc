@@ -34,10 +34,7 @@ SCENARIO("Static checking", "[checker]") {
         "let type Bulk = {height:int, weight:int} in "
         "Bulk {height=6} end");
     REQUIRE(errors.size() == 1);
-    REQUIRE(errors[0] ==
-            "Field counts differ for "
-            "Bulk {height: int, weight: int} and "
-            "{height: 6}");
+    REQUIRE(errors[0] == "Type Bulk has 2 fields and literal has 1");
   }
   GIVEN("Fields out of order") {
     std::vector<std::string> errors = Check(
@@ -55,7 +52,7 @@ SCENARIO("Static checking", "[checker]") {
         "Bulk {height=\"6 feet\", weight=200} end");
     REQUIRE(errors.size() == 1);
     REQUIRE(errors[0] ==
-            "Different types string and int for field height of record Bulk");
+            "Different types string and int for field #1 of record Bulk");
   }
   GIVEN("Wrong type") {
     std::vector<std::string> errors = Check(
