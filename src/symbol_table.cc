@@ -62,16 +62,14 @@ struct StBuilder {
   bool operator()(const T& v) {
     return VisitChildren(v, *this);
   }
-  template <>
+
   bool operator()(const Expr& v) {
     scope_by_expr[&v] = current;
     return VisitChildren(v, *this);
   }
-  template <>
-  bool operator()(const Declaration& d) {
-    return std::visit(*this, d);
-  }
-  template <>
+
+  bool operator()(const Declaration& d) { return std::visit(*this, d); }
+
   bool operator()(const FunctionDeclaration& v) {
     current->function[v.id] = &v;
     Scope* prev = current;
@@ -81,17 +79,17 @@ struct StBuilder {
     current = prev;
     return true;
   }
-  template <>
+
   bool operator()(const VariableDeclaration& v) {
     current->variable[v.id] = &v;
     return VisitChildren(v, *this);
   }
-  template <>
+
   bool operator()(const TypeDeclaration& v) {
     current->type[v.id] = &v;
     return true;
   }
-  template <>
+
   bool operator()(const Let& v) {
     Scope* prev = current;
     scopes.emplace_back(Scope{current});
