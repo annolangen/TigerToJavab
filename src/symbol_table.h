@@ -12,15 +12,15 @@ class SymbolTable {
   static std::unique_ptr<SymbolTable> Build(const syntax::Expr& root);
   virtual ~SymbolTable() = default;
 
-  // Returns function declarations iwht given name visible in given expression.
+  // Returns function declarations with given name visible in given expression.
   virtual const syntax::FunctionDeclaration* lookupFunction(
       const syntax::Expr& expr, std::string_view name) const = 0;
 
-  // Returns variable declarations iwht given name visible in given expression.
+  // Returns variable declarations with given name visible in given expression.
   virtual const syntax::VariableDeclaration* lookupVariable(
       const syntax::Expr& expr, std::string_view name) const = 0;
 
-  // Returns type declarations iwht given name visible in given expression.
+  // Returns type declarations with given name visible in given expression.
   virtual const syntax::TypeDeclaration* lookupType(
       const syntax::Expr& expr, std::string_view name) const = 0;
 

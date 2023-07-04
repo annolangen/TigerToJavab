@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <sstream>
+#include <string_view>
+#include <unordered_set>
 
 #include "debug_string.h"
 #include "symbol_table.h"
@@ -29,6 +31,8 @@ struct Checker {
   TypeFinder& get_type;
 };
 
+static std::unordered_set<std::string_view> kBuiltinTypes {"int", "string" };
+
 // Record literal field names, expression types, and the order
 // thereof must exactly match those of the given record type (2.3)
 struct RecordFieldChecker : Checker {
@@ -46,6 +50,10 @@ struct RecordFieldChecker : Checker {
       }
       const auto* alias = std::get_if<Identifier>(&d->value);
       if (!alias) break;
+      if (kBuiltinTypes.count(*alias)) {
+        emit() << "Type " << lit->type_id << " is not a record";
+        return false;
+      }
       d = symbols.lookupType(e, *alias);
     }
     const auto* tf = std::get_if<TypeFields>(&d->value);
@@ -82,18 +90,20 @@ struct BinaryOpChecker : Checker {
   BinaryOpChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
       : Checker{errors, symbols, tf} {}
   using Checker::operator();
-  bool operator()(const Binary& b) {
-    switch (b.op) {
+  bool operator()(const Expr& e) {
+    const Binary* b = std::get_if<Binary>(&e);
+    if (!b) return true;
+    switch (b->op) {
       case kGreaterThan:
       case kLessThan:
       case kNotGreaterThan:
       case kNotLessThan:
-        CheckComparison(get_type(*b.left), get_type(*b.right), b.op);
+        CheckComparison(get_type(*b->left), get_type(*b->right), b->op);
         break;
       case kAnd:
       case kOr:
-        CheckInt(get_type(*b.left), b.op);
-        CheckInt(get_type(*b.right), b.op);
+        CheckInt(get_type(*b->left), b->op);
+        CheckInt(get_type(*b->right), b->op);
         break;
       default:
         break;
