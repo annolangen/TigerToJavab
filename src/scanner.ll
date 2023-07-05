@@ -95,7 +95,7 @@ string \"[^\"]*\"
 
 void Driver::scan_begin() {
   loc.initialize();
-  yy_flex_debug = trace_scanning;
+  yy_flex_debug = options_.trace_scanning;
   if (file.empty() || file == "-") {
     yyin = stdin;
   } else if (!(yyin = fopen(file.c_str(), "r"))) {
