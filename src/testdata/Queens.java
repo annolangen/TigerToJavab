@@ -2,12 +2,12 @@ import java.util.Arrays;
 
 class Queens {
 
-  interface FT0 {
+  interface __FT0__ {
     void run();
   }
 
-  interface FT1 {
-    void run(int x, FT1 next);
+  interface __FT1__ {
+    void run(int x, __FT1__ next);
   }
 
   public static void main(String[] args) {
@@ -21,7 +21,7 @@ class Queens {
     int[] diag2 = new int[N + N - 1];
     Arrays.fill(diag2, 0);
 
-    FT0 printboard = () -> {
+    __FT0__ printboard = () -> {
       for (int i = 0; i <= N - 1; i++) {
         for (int j = 0; j <= N - 1; j++) {
           System.out.print(col[i] == j ? " O" : " .");
@@ -31,7 +31,7 @@ class Queens {
       System.out.print("\n");
     };
 
-    FT1 __try__ = (int c, FT1 __rec__) -> {
+    __FT1__ __try__ = (int c, __FT1__ __rec__) -> {
       if (c == N) {
         printboard.run();
       } else {
