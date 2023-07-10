@@ -25,10 +25,38 @@ std::string Sanitize(std::string id) {
   return kJavaKeywords.count(id) ? "__" + id + "__" : id;
 }
 
+struct ClassBuilder {
+  std::string name;
+  std::ostringstream fields;
+  std::ostringstream constructor;
+  std::string run_method_type;
+  std:string run_method_name;
+  std::vector<std::string> run_method_args;
+  std::ostringstream run_method_body;
+
+  std::ostream& operator<<(std::ostream& os) {
+    os << "class " << name << " {\n";
+    os << fields.str();
+    os << "  public " << name << "() {\n";
+    os << constructor.str();
+    os << "  }\n";
+    os << "  " << run_method_type << " "<<run_method_name<<"(";
+    const char* sep = "";
+    for (auto& arg : run_method_args) {
+      os << sep << arg;
+      sep = ", ";
+    }
+    os << ") {\n";
+    os << run_method_body.str();
+    os << "  }\n";
+    os << "}\n";
+    return os;
+  }
+};
+
 struct Compiler {
   const SymbolTable& symbols;
   TypeFinder& types;
-  std::ostringstream& decls;
   std::ostringstream& body;
   int next_id = 0;
 
