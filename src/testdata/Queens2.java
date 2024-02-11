@@ -5,13 +5,29 @@ class Queens2 {
   static void print(String s) {
     System.out.print(s);
   }
+
   static void printi(int i) {
     System.out.print(i);
   }
 
+  static <T> T[] fill(T[] a, T v) {
+    Arrays.fill(a, v);
+    return a;
+  }
+
+  static int[] fill(int[] a, int v) {
+    Arrays.fill(a, v);
+    return a;
+  }
+
+  static String[] fill(String[] a, String v) {
+    Arrays.fill(a, v);
+    return a;
+  }
+
   class __Let1__ {
     int N = 8;
-    int[] row = new int[N];
+    int[] row = fill(new int[N], 0);
     int[] col = new int[N];
     int[] diag1 = new int[N + N - 1];
     int[] diag2 = new int[N + N - 1];
