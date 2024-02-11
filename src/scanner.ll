@@ -69,7 +69,7 @@ string \"[^\"]*\"
 "for"	 return yy::Parser::make_FOR(loc);
 "function"	 return yy::Parser::make_FUNCTION(loc);
 "if"	 return yy::Parser::make_IF(loc);
-"in"   return yy::Parser::make_IN(loc);
+"in"     return yy::Parser::make_IN(loc);
 "let"	 return yy::Parser::make_LET(loc);
 "nil"    return yy::Parser::make_NIL(loc);
 "of"	 return yy::Parser::make_OF(loc);
