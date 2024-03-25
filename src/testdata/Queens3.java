@@ -1,6 +1,20 @@
 import java.util.Arrays;
 
 class Queens3 {
+
+  public static void main(String[] args) {
+    int N = 8;
+    int[] row = new int[N];
+    Arrays.fill(row, 0);
+    int[] col = new int[N];
+    Arrays.fill(col, 0);
+    int[] diag1 = new int[N + N - 1];
+    Arrays.fill(diag1, 0);
+    int[] diag2 = new int[N + N - 1];
+    Arrays.fill(diag2, 0);
+    _try(0, N, row, diag1, diag2, col);
+  }
+
   static void printboard(int N, int[] col) {
     for (int i = 0; i <= N - 1; i++) {
       for (int j = 0; j <= N - 1; j++) {
@@ -28,18 +42,5 @@ class Queens3 {
         }
       }
     }
-  }
-
-  public static void main(String[] args) {
-    int N = 8;
-    int[] row = new int[N];
-    Arrays.fill(row, 0);
-    int[] col = new int[N];
-    Arrays.fill(col, 0);
-    int[] diag1 = new int[N + N - 1];
-    Arrays.fill(diag1, 0);
-    int[] diag2 = new int[N + N - 1];
-    Arrays.fill(diag2, 0);
-    _try(0, N, row, diag1, diag2, col);
   }
 }

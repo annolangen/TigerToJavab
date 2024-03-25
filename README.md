@@ -19,7 +19,7 @@ cmake -B build -S .
 make -C build
 ```
 
-From that point forward `make` builds the compiler and `make check` runs
+From that point forward, in directory build, `make` builds the compiler and `make test` runs
 tests.
 
 ## File Organization

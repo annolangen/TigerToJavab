@@ -19,7 +19,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 # Set compiler flags
 set(CMAKE_CXX_FLAGS "-Werror -std=c++17 -g3")
 
-set(TESTED_FILE_STEMS checker debug_string symbol_table type_finder)
+set(TESTED_FILE_STEMS checker debug_string symbol_table type_finder java_source)
 set(TESTED_SRC_FILES "")
 set(TESTED_TEST_FILES "")
 foreach(S ${TESTED_FILE_STEMS})

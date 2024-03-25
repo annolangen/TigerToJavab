@@ -20,6 +20,9 @@ class TypeFinder {
 
   // Returns the type-id of the given expression, or "NOTYPE" in case of errors.
   std::string_view operator()(const syntax::Expr& id);
+  std::string_view operator()(const syntax::VariableDeclaration& vd) {
+    return vd.type_id ? *vd.type_id : (*this)(*vd.value);
+  }
 
  private:
   std::string_view GetLValueType(const syntax::Expr& parent,

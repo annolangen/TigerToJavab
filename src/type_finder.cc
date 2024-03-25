@@ -90,11 +90,9 @@ std::string_view TypeFinder::GetLValueType(const Expr& parent,
       Overloaded{
           [&](const Identifier& name) -> std::string_view {
             const auto* vd = symbols_.lookupVariable(parent, name);
-            if (!vd) {
-              errors_.emplace_back("Variable not found: " + name);
-              return "NOTYPE";
-            }
-            return vd->type_id ? *vd->type_id : (*this)(*vd->value);
+            if (vd) return (*this)(*vd);
+            errors_.emplace_back("Variable not found: " + name);
+            return "NOTYPE";
           },
           [&](const RecordField& rf) -> std::string_view {
             // Example: `foo.bar`

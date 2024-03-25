@@ -10,7 +10,8 @@
 extern FILE* yyin;
 
 namespace testing {
-std::unique_ptr<syntax::Expr> Parse(const std::string& text, DriverOptions options) {
+std::unique_ptr<syntax::Expr> Parse(std::string_view text,
+                                    DriverOptions options) {
   std::ofstream myfile;
   std::string file_name = "/tmp/testing.tig";
   myfile.open(file_name);
@@ -19,7 +20,8 @@ std::unique_ptr<syntax::Expr> Parse(const std::string& text, DriverOptions optio
   return ParseFile(file_name, options);
 }
 
-std::unique_ptr<syntax::Expr> ParseFile(const std::string& file_name, DriverOptions options) {
+std::unique_ptr<syntax::Expr> ParseFile(const std::string& file_name,
+                                        DriverOptions options) {
   yyin = fopen(file_name.c_str(), "r");
   if (!yyin) {
     std::perror("File opening failed");
