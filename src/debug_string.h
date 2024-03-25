@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sstream>
+
 #include "syntax.h"
 
 struct DebugStringOptions {
@@ -11,10 +13,17 @@ struct DebugStringOptions {
 
 template <class T>
 std::string DebugString(const T& item, DebugStringOptions options = {}) {
-  std::string result;
-  return AppendDebugString(result, item, options);
+  std::ostringstream out;
+  AppendDebugString(item, out, options);
+  return out.str();
 }
 
-// Family of functions that return their string reference argument.
-std::string& AppendDebugString(std::string& out, const syntax::Expr& t,
-                               DebugStringOptions options = {});
+// Family of functions that return their stream reference argument.
+std::ostream& AppendDebugString(const syntax::Declaration& d, std::ostream& out,
+                                DebugStringOptions options = {});
+std::ostream& AppendDebugString(const syntax::Expr& e, std::ostream& out,
+                                DebugStringOptions options = {});
+std::ostream& AppendDebugString(const syntax::LValue& v, std::ostream& out,
+                                DebugStringOptions options = {});
+std::ostream& AppendDebugString(const syntax::Type& t, std::ostream& out,
+                                DebugStringOptions options = {});

@@ -6,6 +6,7 @@
 
 namespace {
 
+using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 
 std::string Compile(std::string_view text,
@@ -20,7 +21,9 @@ std::string Compile(std::string_view text,
 }
 
 SCENARIO("JavaSource") {
-  // GIVEN("Leaf Expression") { REQUIRE_THAT(Compile("nil"), Equals(R"()")); }
+  GIVEN("Leaf Expression") {
+    REQUIRE_THAT(Compile("nil"), ContainsSubstring("null"));
+  }
   GIVEN("array type and an array variable") {
     REQUIRE_THAT(Compile(R"(
 let
@@ -30,15 +33,15 @@ in
 	arr1
 end)"),
                  Equals(R"(import java.utils.Arrays;
-  
+
 class Main {
-  
+
   public static void main(String[] args) {
-  int[] arr1 = new int[10];
-  Arrays.fill(arr1, 0);
-  arr1;
-  }
-  
+int[] arr1 = new int[10];
+Arrays.fill(arr1, 0);
+arr1;
+}
+}
 )"));
   }
   GIVEN("8 Queens") {

@@ -7,6 +7,8 @@
 #include <variant>
 #include <vector>
 
+#include "debug_string.h"
+
 namespace java {
 namespace {
 
@@ -133,9 +135,9 @@ struct Compiler {
     }
     out << "Arrays.fill(";
     (*this)(*l_value);
-    out << expr.type_id << ", ";
+    out << ", ";
     (*this)(*expr.value);
-    out << ");\n";
+    out << ")";
   }
   void operator()(const syntax::IfThen& expr) {
     out << "if (";
@@ -187,14 +189,8 @@ struct Compiler {
     }
     out << ";\n";
   }
-  void operator()(const syntax::TypeDeclaration& expr) {
-    out << "class " << expr.id << " {\n";
-    std::visit(*this, expr.value);
-    out << "}\n";
-  }
-  void operator()(const syntax::ArrayType& expr) {
-    out << "class " << expr.element_type_id << "[]";
-  }
+  void operator()(const syntax::TypeDeclaration& expr) {}
+  void operator()(const syntax::ArrayType& expr) { out << "TODO ArrayType"; }
   void operator()(const syntax::TypeFields& expr) {
     for (auto& field : expr) {
       out << field.type_id << " " << field.id << ";\n";
@@ -203,7 +199,6 @@ struct Compiler {
   void operator()(const syntax::Let& expr) {
     for (auto& decl : expr.declaration) {
       std::visit(*this, *decl);
-      out << ";\n";
     }
     for (auto& stmt : expr.body) {
       (*this)(*stmt);
@@ -247,7 +242,7 @@ std::string Compile(const syntax::Expr& expr, const SymbolTable& t,
        << "\n\n";
   body << "class " << class_name << " {\n\n";
   body << "  public static void main(String[] args) {\n";
-  post_body << "}\n\n";
+  post_body << "}\n}\n";
 
   Compiler compile{t, tf, body, post_body};
   compile(expr);

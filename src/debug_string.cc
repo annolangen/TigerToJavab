@@ -4,14 +4,6 @@
 
 namespace {
 
-std::ostream& Append(const syntax::LValue& v, DebugStringOptions options,
-                     std::ostream& out);
-std::ostream& Append(const syntax::Declaration& d, DebugStringOptions options,
-                     std::ostream& out);
-std::ostream& Append(const syntax::Type& t, DebugStringOptions options,
-                     std::ostream& out);
-std::ostream& Append(const syntax::Expr& e, DebugStringOptions options,
-                     std::ostream& out);
 template <class T>
 struct Str {
   const T& value;
@@ -21,11 +13,41 @@ template <class T>
 Str(const T&, DebugStringOptions) -> Str<T>;
 template <class T>
 std::ostream& operator<<(std::ostream& out, const Str<T>& s) {
-  return Append(s.value, s.options, out);
+  return AppendDebugString(s.value, out, s.options);
 }
 
-std::ostream& Append(const syntax::Expr& e, DebugStringOptions options,
-                     std::ostream& out) {
+}  // namespace
+
+std::ostream& AppendDebugString(const syntax::Declaration& d, std::ostream& out,
+                                DebugStringOptions options) {
+  std::visit(syntax::Overloaded{
+                 [&](const syntax::FunctionDeclaration& f) {
+                   out << "function " << f.id << "(";
+                   const char* sep = "";
+                   for (const auto& param : f.parameter) {
+                     out << sep << param.id << ": " << param.type_id;
+                     sep = ", ";
+                   }
+                   out << "): " << f.type_id.value_or("NOTYPE") << std::endl
+                       << options.indent;
+                   DebugStringOptions body_options = options;
+                   body_options.indent += options.indent;
+                   out << Str{*f.body, body_options};
+                 },
+                 [&](const syntax::VariableDeclaration& v) {
+                   out << "var " << v.id << ": " << v.type_id.value_or("NOTYPE")
+                       << " := " << Str{*v.value, options};
+                 },
+                 [&](const syntax::TypeDeclaration& t) {
+                   out << "type " << t.id << " = " << Str{t.value, options};
+                 }},
+             d);
+
+  return out;
+}
+
+std::ostream& AppendDebugString(const syntax::Expr& e, std::ostream& out,
+                                DebugStringOptions options) {
   std::visit(
       syntax::Overloaded{
           [&](const syntax::StringConstant& c) {
@@ -34,7 +56,7 @@ std::ostream& Append(const syntax::Expr& e, DebugStringOptions options,
           [&](const syntax::IntegerConstant& c) { out << c; },
           [&](const syntax::Nil&) { out << "nil"; },
           [&](const std::unique_ptr<syntax::LValue>& l_value) {
-            Append(*l_value, options, out);
+            AppendDebugString(*l_value, out, options);
           },
           [&](const syntax::Negated& n) {
             out << "-" << Str{*n.expr, options};
@@ -50,7 +72,7 @@ std::ostream& Append(const syntax::Expr& e, DebugStringOptions options,
             out << f.id << "(";
             const char* sep = "";
             for (const auto& arg : f.arguments) {
-              Append(*arg, options, out << sep);
+              AppendDebugString(*arg, out << sep, options);
               sep = ", ";
             }
             out << ")";
@@ -60,7 +82,7 @@ std::ostream& Append(const syntax::Expr& e, DebugStringOptions options,
             const char* sep = "";
             for (const auto& field : r.fields) {
               out << sep << field.id << " = ";
-              Append(*field.expr, options, out);
+              AppendDebugString(*field.expr, out, options);
               sep = ", ";
             }
             out << "}";
@@ -114,8 +136,8 @@ std::ostream& Append(const syntax::Expr& e, DebugStringOptions options,
   return out;
 }
 
-std::ostream& Append(const syntax::LValue& v, DebugStringOptions options,
-                     std::ostream& out) {
+std::ostream& AppendDebugString(const syntax::LValue& v, std::ostream& out,
+                                DebugStringOptions options) {
   std::visit(
       syntax::Overloaded{[&](const syntax::Identifier& id) { out << id; },
                          [&](const syntax::RecordField& f) {
@@ -129,36 +151,8 @@ std::ostream& Append(const syntax::LValue& v, DebugStringOptions options,
   return out;
 }
 
-std::ostream& Append(const syntax::Declaration& d, DebugStringOptions options,
-                     std::ostream& out) {
-  std::visit(syntax::Overloaded{
-                 [&](const syntax::FunctionDeclaration& f) {
-                   out << "function " << f.id << "(";
-                   const char* sep = "";
-                   for (const auto& param : f.parameter) {
-                     out << sep << param.id << ": " << param.type_id;
-                     sep = ", ";
-                   }
-                   out << "): " << f.type_id.value_or("NOTYPE") << std::endl
-                       << options.indent;
-                   DebugStringOptions body_options = options;
-                   body_options.indent += options.indent;
-                   out << Str{*f.body, body_options};
-                 },
-                 [&](const syntax::VariableDeclaration& v) {
-                   out << "var " << v.id << ": " << v.type_id.value_or("NOTYPE")
-                       << " := " << Str{*v.value, options};
-                 },
-                 [&](const syntax::TypeDeclaration& t) {
-                   out << "type " << t.id << " = " << Str{t.value, options};
-                 }},
-             d);
-
-  return out;
-}
-
-std::ostream& Append(const syntax::Type& t, DebugStringOptions options,
-                     std::ostream& out) {
+std::ostream& AppendDebugString(const syntax::Type& t, std::ostream& out,
+                                DebugStringOptions options) {
   std::visit(
       syntax::Overloaded{[&](const syntax::Identifier& id) { out << id; },
                          [&](const syntax::TypeFields& f) {
@@ -175,12 +169,4 @@ std::ostream& Append(const syntax::Type& t, DebugStringOptions options,
                          }},
       t);
   return out;
-}
-}  // namespace
-
-std::string& AppendDebugString(std::string& out_string, const syntax::Expr& e,
-                               DebugStringOptions options) {
-  std::ostringstream out;
-  Append(e, options, out);
-  return out_string.append(out.str());
 }
