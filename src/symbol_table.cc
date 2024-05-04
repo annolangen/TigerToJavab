@@ -21,28 +21,37 @@ struct Scope {
   std::unordered_map<std::string_view, const TypeDeclaration*> type;
 };
 
+// Owns all Scopes and a map pointing each expression (by its address) to its
+// scope. Each lookup member function consists of seaching each scope in the
+// parent chain for the symbol.
 class St : public SymbolTable {
- public:
-  St(std::vector<Scope>&& scopes,
+public:
+  St(std::vector<std::unique_ptr<Scope>>&& scopes,
      std::unordered_map<const Expr*, const Scope*>&& scope_by_expr)
       : scopes_(std::move(scopes)), scope_by_expr_(std::move(scope_by_expr)) {}
 
-  const FunctionDeclaration* lookupFunction(
-      const Expr& expr, std::string_view name) const override {
-    const Scope* s = Lookup(scope_by_expr_, &expr);
-    return s ? Lookup(s->function, name) : nullptr;
+  const FunctionDeclaration*
+  lookupFunction(const Expr& expr, std::string_view name) const override {
+    for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
+      if (const auto* d = Lookup(s->function, name); d) return d;
+    }
+    return nullptr;
   }
 
-  const VariableDeclaration* lookupVariable(
-      const Expr& expr, std::string_view name) const override {
-    const Scope* s = Lookup(scope_by_expr_, &expr);
-    return s ? Lookup(s->variable, name) : nullptr;
+  const VariableDeclaration*
+  lookupVariable(const Expr& expr, std::string_view name) const override {
+    for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
+      if (const auto* d = Lookup(s->variable, name); d) return d;
+    }
+    return nullptr;
   }
 
   const TypeDeclaration* lookupType(const Expr& expr,
                                     std::string_view name) const override {
-    const Scope* s = Lookup(scope_by_expr_, &expr);
-    return s ? Lookup(s->type, name) : nullptr;
+    for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
+      if (const auto* d = Lookup(s->type, name); d) return d;
+    }
+    return nullptr;
   }
 
   std::string toString() const override {
@@ -52,14 +61,16 @@ class St : public SymbolTable {
     return out.str();
   }
 
- private:
-  std::vector<Scope> scopes_;
+private:
+  std::vector<std::unique_ptr<Scope>> scopes_;
   std::unordered_map<const Expr*, const Scope*> scope_by_expr_;
 };
 
+// A visitor that creates and populates all the Scopes. FunctionDeclaration and
+// Let create a new Scope. The `Build` function transfers ownership of the
+// Scopes and the map of Expr to Scope to the returned SymbolTable.
 struct StBuilder {
-  template <class T>
-  bool operator()(const T& v) {
+  template <class T> bool operator()(const T& v) {
     return VisitChildren(v, *this);
   }
 
@@ -73,8 +84,8 @@ struct StBuilder {
   bool operator()(const FunctionDeclaration& v) {
     current->function[v.id] = &v;
     Scope* prev = current;
-    scopes.emplace_back(Scope{current});
-    current = &scopes.back();
+    scopes.emplace_back(new Scope{.parent = current});
+    current = scopes.back().get();
     if (!VisitChildren(v, *this)) return false;
     current = prev;
     return true;
@@ -92,8 +103,8 @@ struct StBuilder {
 
   bool operator()(const Let& v) {
     Scope* prev = current;
-    scopes.emplace_back(Scope{current});
-    current = &scopes.back();
+    scopes.emplace_back(new Scope{.parent = current});
+    current = scopes.back().get();
     if (!VisitChildren(v, *this)) return false;
     current = prev;
     return true;
@@ -101,11 +112,12 @@ struct StBuilder {
 
   St Build() { return St(std::move(scopes), std::move(scope_by_expr)); }
 
-  std::vector<Scope> scopes = {{nullptr}};
+  std::vector<std::unique_ptr<Scope>> scopes;
   std::unordered_map<const Expr*, const Scope*> scope_by_expr;
-  Scope* current = &scopes[0];
+  Scope* current =
+      (scopes.emplace_back(new Scope{.parent = nullptr}), scopes[0].get());
 };
-}  // namespace
+} // namespace
 
 std::unique_ptr<SymbolTable> SymbolTable::Build(const Expr& root) {
   StBuilder builder;
