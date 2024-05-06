@@ -17,7 +17,7 @@ const T* Lookup(const std::unordered_map<K, const T*>& map, K key) {
 struct Scope {
   const Scope* parent;
   std::unordered_map<std::string_view, const FunctionDeclaration*> function;
-  std::unordered_map<std::string_view, const VariableDeclaration*> variable;
+  std::unordered_map<std::string_view, StorageLocation> storage;
   std::unordered_map<std::string_view, const TypeDeclaration*> type;
 };
 
@@ -25,24 +25,33 @@ struct Scope {
 // scope. Each lookup member function consists of seaching each scope in the
 // parent chain for the symbol.
 class St : public SymbolTable {
-public:
+ public:
   St(std::vector<std::unique_ptr<Scope>>&& scopes,
      std::unordered_map<const Expr*, const Scope*>&& scope_by_expr)
       : scopes_(std::move(scopes)), scope_by_expr_(std::move(scope_by_expr)) {}
 
-  const FunctionDeclaration*
-  lookupFunction(const Expr& expr, std::string_view name) const override {
+  const FunctionDeclaration* lookupFunction(
+      const Expr& expr, std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
       if (const auto* d = Lookup(s->function, name); d) return d;
     }
     return nullptr;
   }
 
-  const VariableDeclaration*
-  lookupVariable(const Expr& expr, std::string_view name) const override {
+  StorageLocation lookupStorageLocation(const Expr& expr,
+                                        std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
-      if (const auto* d = Lookup(s->variable, name); d) return d;
+      if (auto it = s->storage.find(name); it != s->storage.end()) {
+        return it->second;
+      }
     }
+    return nullptr;
+  }
+
+  const VariableDeclaration* lookupVariable(
+      const Expr& expr, std::string_view name) const override {
+    StorageLocation d = lookupStorageLocation(expr, name);
+    if (auto v = std::get_if<const VariableDeclaration*>(&d); v) return *v;
     return nullptr;
   }
 
@@ -61,7 +70,7 @@ public:
     return out.str();
   }
 
-private:
+ private:
   std::vector<std::unique_ptr<Scope>> scopes_;
   std::unordered_map<const Expr*, const Scope*> scope_by_expr_;
 };
@@ -70,7 +79,8 @@ private:
 // Let create a new Scope. The `Build` function transfers ownership of the
 // Scopes and the map of Expr to Scope to the returned SymbolTable.
 struct StBuilder {
-  template <class T> bool operator()(const T& v) {
+  template <class T>
+  bool operator()(const T& v) {
     return VisitChildren(v, *this);
   }
 
@@ -86,13 +96,16 @@ struct StBuilder {
     Scope* prev = current;
     scopes.emplace_back(new Scope{.parent = current});
     current = scopes.back().get();
+    for (const TypeField& p : v.parameter) {
+      current->storage[p.id] = &p;
+    }
     if (!VisitChildren(v, *this)) return false;
     current = prev;
     return true;
   }
 
   bool operator()(const VariableDeclaration& v) {
-    current->variable[v.id] = &v;
+    current->storage[v.id] = &v;
     return VisitChildren(v, *this);
   }
 
@@ -117,7 +130,7 @@ struct StBuilder {
   Scope* current =
       (scopes.emplace_back(new Scope{.parent = nullptr}), scopes[0].get());
 };
-} // namespace
+}  // namespace
 
 std::unique_ptr<SymbolTable> SymbolTable::Build(const Expr& root) {
   StBuilder builder;
