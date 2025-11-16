@@ -32,6 +32,7 @@ struct Let;
 struct Parenthesized;
 
 using Identifier = std::string;
+using TypeId = std::string;
 using LValue = std::variant<Identifier, RecordField, ArrayElement>;
 
 struct StringConstant {
@@ -75,11 +76,11 @@ struct FieldAssignment {
   std::unique_ptr<Expr> expr;
 };
 struct RecordLiteral {
-  std::string type_id;
+  TypeId type_id;
   std::vector<FieldAssignment> fields;
 };
 struct ArrayLiteral {
-  std::string type_id;
+  TypeId type_id;
   std::unique_ptr<Expr> size;
   std::unique_ptr<Expr> value;
 };
@@ -106,25 +107,25 @@ struct Break {};
 struct VariableDeclaration {
   std::string id;
   std::unique_ptr<Expr> value;
-  std::optional<std::string> type_id;
+  std::optional<TypeId> type_id;
 };
 struct TypeField {
   std::string id;
-  std::string type_id;
+  TypeId type_id;
 };
 using TypeFields = std::vector<TypeField>;
 struct ArrayType {
-  std::string element_type_id;
+  TypeId element_type_id;
 };
 struct FunctionDeclaration {
   std::string id;
   TypeFields parameter;
   std::unique_ptr<Expr> body;
-  std::optional<std::string> type_id;
+  std::optional<TypeId> type_id;
 };
-using Type = std::variant<Identifier, TypeFields, ArrayType>;
+using Type = std::variant<TypeId, TypeFields, ArrayType>;
 struct TypeDeclaration {
-  std::string id;
+  TypeId id;
   Type value;
 };
 using Declaration =

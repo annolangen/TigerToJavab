@@ -178,7 +178,7 @@ type_declaration:
   "type" "identifier" "=" type { $$ = std::make_unique<Declaration>(TypeDeclaration{$2, $4}); }
 ;
 type:
-  "identifier" { $$ = Identifier{$1}; }
+  "identifier" { $$ = TypeId{$1}; }
 | "{" type_fields_opt "}" { $$ = $2; }
 | "array" "of" "identifier" { $$ = ArrayType{$3}; }
 ;

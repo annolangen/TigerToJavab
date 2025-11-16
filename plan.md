@@ -19,13 +19,14 @@ An alternative, as you mentioned, would be to use the **Clang/LLVM API**.
 
 _Goal: Establish a modern C++ environment and build a complete Abstract Syntax Tree (AST)._
 
-- [ ] **Task 1.1: Modernize CMake**
+- [x] **Task 1.1: Modernize CMake**
 
   - Review and refactor `CMakeLists.txt` to use modern CMake functions (`target_link_libraries`, `target_include_directories`, etc.).
   - Set the C++ standard to C++17 or C++20.
   - Enable warnings (`-Wall`, `-Wextra`, `-Wpedantic`) to enforce code quality.
 
 - [ ] **Task 1.2: Define the AST**
+- [x] **Task 1.2: Define the AST**
 
   - Design a class hierarchy for all Tiger language constructs (expressions, declarations, types, etc.).
   - Use modern C++ features: `std::unique_ptr` for tree ownership, `std::vector` for lists of nodes, and `std::variant` or `std::optional` where appropriate.
