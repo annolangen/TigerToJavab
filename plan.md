@@ -25,16 +25,12 @@ _Goal: Establish a modern C++ environment and build a complete Abstract Syntax T
   - Set the C++ standard to C++17 or C++20.
   - Enable warnings (`-Wall`, `-Wextra`, `-Wpedantic`) to enforce code quality.
 
-- [ ] **Task 1.2: Define the AST**
 - [x] **Task 1.2: Define the AST**
 
   - Design a class hierarchy for all Tiger language constructs (expressions, declarations, types, etc.).
   - Use modern C++ features: `std::unique_ptr` for tree ownership, `std::vector` for lists of nodes, and `std::variant` or `std::optional` where appropriate.
 
-- [ ] **Task 1.3: Integrate AST with Parser**
-
-  - Modify the `bison` grammar (`.y` file) to build and return the C++ AST.
-  - Ensure the lexer (`.l` file) correctly provides token values (e.g., string literals, integer values) to the parser.
+- [x] **Task 1.3: Integrate AST with Parser**
 
 - [ ] **Task 1.4: Implement an AST Printer**
   - Create a "visitor" class that can traverse the AST and print a textual representation. This is invaluable for debugging the parser.
