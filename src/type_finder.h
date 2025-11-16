@@ -10,7 +10,7 @@
 class TypeFinder {
  public:
   TypeFinder(const SymbolTable& symbols, std::vector<std::string>& errors)
-      : errors_(errors), symbols_(symbols) {}
+      : symbols_(symbols), errors_(errors) {}
   TypeFinder() = delete;
   ~TypeFinder() = default;
   TypeFinder(const TypeFinder&) = delete;

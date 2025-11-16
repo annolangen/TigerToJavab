@@ -1,8 +1,13 @@
 # Basic CMake file for Tiger compiler with flex and bison
 
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.12)
 
 project(TigerCompiler)
+
+# Set the C++ standard for the entire project
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Add the Bison and Flex targets
 find_package(BISON REQUIRED)
@@ -11,13 +16,6 @@ BISON_TARGET(MyParser src/parser.yy ${CMAKE_CURRENT_BINARY_DIR}/parser.cc DEFINE
 FLEX_TARGET(MyScanner src/scanner.ll  ${CMAKE_CURRENT_BINARY_DIR}/scanner.cc DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/scanner.hh)
 ADD_FLEX_BISON_DEPENDENCY(MyScanner MyParser)
 set_source_files_properties(src/driver.cc PROPERTIES OBJECT_DEPENDS ${BISON_MyParser_OUTPUT_HEADER})
-
-# Add the include directory to the include path
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-# Set compiler flags
-set(CMAKE_CXX_FLAGS "-Werror -std=c++17 -g3")
 
 set(TESTED_FILE_STEMS checker debug_string symbol_table type_finder java_source)
 set(TESTED_SRC_FILES "")
@@ -29,12 +27,24 @@ endforeach()
 
 # Define library for executable and tests
 add_library(tc_lib src/driver.cc src/emit.cc src/binary_op.cc ${TESTED_SRC_FILES})
+target_include_directories(tc_lib PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
+  "$<INSTALL_INTERFACE:include>" # For future installation
+)
+target_compile_options(tc_lib PRIVATE
+  -Wall
+  -Wextra
+  -Wpedantic
+  -Werror
+  -g3
+)
 
 # Add the executable
 add_executable(tc ${BISON_MyParser_OUTPUTS} ${FLEX_MyScanner_OUTPUTS} src/tc.cc)
 
 # Add the libraries
-target_link_libraries(tc tc_lib)
+target_link_libraries(tc PRIVATE tc_lib)
 
 # Add the tests
 Include(FetchContent)
@@ -48,8 +58,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(tests ${TESTED_TEST_FILES} ${BISON_MyParser_OUTPUTS} ${FLEX_MyScanner_OUTPUTS} src/testing/testing.cc)
-target_link_libraries(tests tc_lib)
-target_link_libraries(tests Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE tc_lib Catch2::Catch2WithMain)
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(CTest)

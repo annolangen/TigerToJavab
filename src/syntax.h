@@ -15,21 +15,21 @@ namespace syntax {
 // type aliases.
 
 // forward declarations
-class RecordField;
-class ArrayElement;
-class Negated;
-class Binary;
-class Assignment;
-class FunctionCall;
-class RecordLiteral;
-class ArrayLiteral;
-class IfThen;
-class IfThenElse;
-class While;
-class For;
-class Break;
-class Let;
-class Parenthesized;
+struct RecordField;
+struct ArrayElement;
+struct Negated;
+struct Binary;
+struct Assignment;
+struct FunctionCall;
+struct RecordLiteral;
+struct ArrayLiteral;
+struct IfThen;
+struct IfThenElse;
+struct While;
+struct For;
+struct Break;
+struct Let;
+struct Parenthesized;
 
 using Identifier = std::string;
 using LValue = std::variant<Identifier, RecordField, ArrayElement>;
@@ -145,27 +145,27 @@ Overloaded(F...) -> Overloaded<F...>;
 // Overloaded template function for visiting child nodes. Returns false to
 // indicate stop.
 template <class F>
-bool VisitChildren(const StringConstant& v, F&& f) {
+bool VisitChildren(const StringConstant&, F&&) {
   return true;
 }
 template <class F>
-bool VisitChildren(const Identifier& v, F&& f) {
+bool VisitChildren(const Identifier&, F&&) {
   return true;
 }
 template <class F>
-bool VisitChildren(const IntegerConstant& v, F&& f) {
+bool VisitChildren(const IntegerConstant&, F&&) {
   return true;
 }
 template <class F>
-bool VisitChildren(const Nil& v, F&& f) {
+bool VisitChildren(const Nil&, F&&) {
   return true;
 }
 template <class F>
-bool VisitChildren(const Break& v, F&& f) {
+bool VisitChildren(const Break&, F&&) {
   return true;
 }
 template <class F>
-bool VisitChildren(const TypeField& v, F&& f) {
+bool VisitChildren(const TypeField&, F&&) {
   return true;
 }
 template <class F>
@@ -264,7 +264,7 @@ bool VisitChildren(const FunctionDeclaration& v, F&& f) {
   return std::invoke(f, *v.body);
 }
 template <class F>
-bool VisitChildren(const TypeDeclaration& v, F&& f) {
+bool VisitChildren(const TypeDeclaration&, F&&) {
   return true;
 }
 template <class F>

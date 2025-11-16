@@ -69,7 +69,58 @@ let
              diag2[r+7-c] := 0)
 in try(0) end
 )"),
-                 Equals(R"()"));
+                 Equals(R"(import java.utils.Arrays;
+
+class Main {
+
+  public static void main(String[] args) {
+int N = 8;
+int[] row = new int[N];
+Arrays.fill(row, 0);
+int[] col = new int[N];
+Arrays.fill(col, 0);
+int[] diag1 = new int[N + N - 1];
+Arrays.fill(diag1, 0);
+int[] diag2 = new int[N + N - 1];
+Arrays.fill(diag2, 0);
+  static void printboard() {
+
+for (int i = 0; i < N - 1; i++) {
+
+for (int j = 0; j < N - 1; j++) {
+print.run(if (col[i] = j) {
+" O"
+} else {
+" ."
+})
+};
+print.run("\n")
+};
+print.run("\n")
+  }
+  static void try(int c) {
+if (c = N) {
+printboard.run()
+} else {
+for (int r = 0; r < N - 1; r++) {
+if (row[r] = 0 & diag1[r + c] = 0 & diag2[r + 7 - c] = 0) {
+
+row[r] = 1;
+diag1[r + c] = 1;
+diag2[r + 7 - c] = 1;
+col[c] = r;
+_try.run(c + 1);
+row[r] = 0;
+diag1[r + c] = 0;
+diag2[r + 7 - c] = 0
+}
+}
+}
+  }
+_try.run(0);
+}
+}
+)"));
   }
 }
 }  // namespace

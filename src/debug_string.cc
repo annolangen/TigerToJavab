@@ -152,7 +152,7 @@ std::ostream& AppendDebugString(const syntax::LValue& v, std::ostream& out,
 }
 
 std::ostream& AppendDebugString(const syntax::Type& t, std::ostream& out,
-                                DebugStringOptions options) {
+                                DebugStringOptions) {
   std::visit(
       syntax::Overloaded{[&](const syntax::Identifier& id) { out << id; },
                          [&](const syntax::TypeFields& f) {

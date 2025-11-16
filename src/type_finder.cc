@@ -7,7 +7,7 @@ using namespace syntax;
 // Helper function to concatenate std::string and std::string_view.
 std::string operator+(std::string&& s, std::string_view v) {
   s.append(v.data(), v.size());
-  return s;
+  return std::move(s);
 }
 
 // Returns syntax::Type* that holds either TypeFields or ArrayType for the given
@@ -42,7 +42,7 @@ std::string_view TypeFinder::operator()(const Expr& id) {
       Overloaded{
           [](const StringConstant&) -> std::string_view { return "string"; },
           [](const IntegerConstant&) -> std::string_view { return "int"; },
-          [](const Negated& n) -> std::string_view { return "int"; },
+          [](const Negated&) -> std::string_view { return "int"; },
           [](const RecordLiteral& rl) -> std::string_view {
             return rl.type_id;
           },

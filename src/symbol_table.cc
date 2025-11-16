@@ -94,7 +94,7 @@ struct StBuilder {
   bool operator()(const FunctionDeclaration& v) {
     current->function[v.id] = &v;
     Scope* prev = current;
-    scopes.emplace_back(new Scope{.parent = current});
+    scopes.emplace_back(std::make_unique<Scope>(Scope{.parent = current}));
     current = scopes.back().get();
     for (const TypeField& p : v.parameter) {
       current->storage[p.id] = &p;
@@ -116,7 +116,7 @@ struct StBuilder {
 
   bool operator()(const Let& v) {
     Scope* prev = current;
-    scopes.emplace_back(new Scope{.parent = current});
+    scopes.emplace_back(std::make_unique<Scope>(Scope{.parent = current}));
     current = scopes.back().get();
     if (!VisitChildren(v, *this)) return false;
     current = prev;
@@ -128,7 +128,8 @@ struct StBuilder {
   std::vector<std::unique_ptr<Scope>> scopes;
   std::unordered_map<const Expr*, const Scope*> scope_by_expr;
   Scope* current =
-      (scopes.emplace_back(new Scope{.parent = nullptr}), scopes[0].get());
+      (scopes.emplace_back(std::make_unique<Scope>(Scope{.parent = nullptr})),
+       scopes[0].get());
 };
 }  // namespace
 

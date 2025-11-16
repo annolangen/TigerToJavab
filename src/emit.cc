@@ -1,4 +1,5 @@
 #include "emit.h"
+
 #include <functional>
 #include <optional>
 #include <unordered_map>
@@ -84,7 +85,7 @@ struct CodeAttribute : AttributeInfo {
     Put2(os, max_locals);
     Put4(os, code_bytes.length());
     os.write(code_bytes.data(), code_bytes.length());
-    Put2(os, 0); // exception table length
+    Put2(os, 0);  // exception table length
     Put2(os, attributes.size());
     for (const auto& a : attributes) a->Emit(os);
     return os.str();
@@ -140,10 +141,10 @@ struct Constant {
   virtual Tag tag() const = 0;
 
   // Match methods help find an instance based on member data
-  virtual bool Matches(std::string_view text) const { return false; }
-  virtual bool Matches(u2 index) const { return false; }
-  virtual bool Matches(u2 first, u2 second) const { return false; }
-  virtual bool Matches(int bytes) const { return false; }
+  virtual bool Matches(std::string_view) const { return false; }
+  virtual bool Matches(u2) const { return false; }
+  virtual bool Matches(u2, u2) const { return false; }
+  virtual bool Matches(int) const { return false; }
 
   // Safe cast by virtual method
   virtual std::optional<Utf8Constant*> utf8() { return {}; }
@@ -200,7 +201,7 @@ struct StringConstant : Constant, Pushable {
 struct IntegerConstant : Constant, Pushable {
   u4 bytes;
   Tag tag() const override { return kInteger; }
-  bool Matches(int other) const override { return other == bytes; }
+  bool Matches(int) const override { return false; }
   std::optional<IntegerConstant*> integer() override { return this; }
   void Emit(std::ostream& os) const override {
     os.put(tag());
@@ -248,7 +249,9 @@ struct NameAndTypeConstant : Constant {
   u2 name_index;
   u2 descriptor_index;
   Tag tag() const override { return kNameAndType; }
-  bool Matches(u2 first, u2 second) const override { return false; }
+  bool Matches(u2 first, u2 second) const override {
+    return name_index == first && descriptor_index == second;
+  }
   std::optional<NameAndTypeConstant*> nameAndType() override { return this; }
   void Emit(std::ostream& os) const override {
     os.put(tag());
@@ -285,16 +288,16 @@ struct JvmProgram : Program {
   JvmProgram() = default;
   ~JvmProgram() override = default;
 
-  const Pushable* DefineStringConstant(std::string_view text) override {
+  const Pushable& DefineStringConstant(std::string_view text) override {
     return stringConstant(text);
   }
-  const Pushable* DefineIntegerConstant(int i) override {
+  const Pushable& DefineIntegerConstant(int i) override {
     return integerConstant(i);
   }
 
   const Invocable* LookupLibraryFunction(std::string_view name) override {
     if (auto found = LibraryFunctionType(name); found) {
-      return methodRefConstant("Std", name, *found);
+      return &methodRefConstant("Std", name, *found);
     }
     return nullptr;
   }
@@ -303,136 +306,139 @@ struct JvmProgram : Program {
                       std::string_view descriptor,
                       std::string_view code_bytes) override {
     methods.push_back(methodInfo(flags, name, descriptor));
-    methods.rbegin()->attributes.emplace_back(
-        new CodeAttribute(utf8Constant("Code")->index, code_bytes));
+    methods.rbegin()->attributes.emplace_back(std::make_unique<CodeAttribute>(
+        utf8Constant("Code").index, code_bytes));
   };
 
   void DefineConstructor() {
     std::ostringstream os;
     os.put(Instruction::_aload_0);
     os.put(Instruction::_invokespecial);
-    Put2(os, methodRefConstant("java/lang/Object", "<init>", "()V")->index);
+    Put2(os, methodRefConstant("java/lang/Object", "<init>", "()V").index);
     os.put(Instruction::_return);
     DefineFunction(0, "<init>", "()V", os.str());
   }
 
   void Emit(std::ostream& os) override {
     DefineConstructor();
-    u2 this_class = classConstant("Main")->index;
-    u2 super_class = classConstant("java/lang/Object")->index;
+    u2 this_class = classConstant("Main").index;
+    u2 super_class = classConstant("java/lang/Object").index;
 
     Put4(os, 0xcafebabe);
-    Put2(os, 0);  // minor version
-    Put2(os, 50); // major version
-    Put2(os, constant_pool.size() + 1);
+    Put2(os, 0);   // minor version
+    Put2(os, 50);  // major version
+    Put2(os, static_cast<u2>(constant_pool.size() + 1));
     for (const auto& c : constant_pool) c->Emit(os);
-    Put2(os, 0x20); // flags
+    Put2(os, 0x20);  // flags
     Put2(os, this_class);
     Put2(os, super_class);
-    Put2(os, 0); // interfaces count
-    Put2(os, 0); // field count
-    Put2(os, methods.size());
+    Put2(os, 0);  // interfaces count
+    Put2(os, 0);  // field count
+    Put2(os, static_cast<u2>(methods.size()));
     for (const auto& m : methods) m.Emit(os);
-    Put2(os, 0); // attributes count
+    Put2(os, 0);  // attributes count
   }
 
-  template <class T> T* Adopt(T* t) {
+  template <class T>
+  T& Adopt(std::unique_ptr<T> t) {
     t->index = 1 + constant_pool.size();
-    constant_pool.emplace_back(t);
-    return t;
+    T* raw_ptr = t.get();
+    constant_pool.emplace_back(std::move(t));
+    return *raw_ptr;
   }
 
-  Utf8Constant* utf8Constant(std::string_view text) {
+  Utf8Constant& utf8Constant(std::string_view text) {
     for (auto& c : constant_pool) {
       if (c->tag() == ClassConstant::kUtf8 && c->Matches(text)) {
-        return *c->utf8();
+        return **c->utf8();
       }
     }
-    Utf8Constant* result = Adopt(new Utf8Constant());
+    auto result = std::make_unique<Utf8Constant>();
     result->text = text;
-    return result;
+    return Adopt(std::move(result));
   }
 
-  StringConstant* stringConstant(std::string_view text) {
-    u2 utf8_index = utf8Constant(text)->index;
+  StringConstant& stringConstant(std::string_view text) {
+    u2 utf8_index = utf8Constant(text).index;
     for (auto& c : constant_pool) {
       if (c->tag() == ClassConstant::kString && c->Matches(utf8_index)) {
-        return *c->string();
+        return **c->string();
       }
     }
-    StringConstant* result = Adopt(new StringConstant());
+    auto result = std::make_unique<StringConstant>();
     result->string_index = utf8_index;
-    return result;
+    return Adopt(std::move(result));
   }
 
-  IntegerConstant* integerConstant(int i) {
+  IntegerConstant& integerConstant(int i) {
     for (auto& c : constant_pool) {
       if (c->tag() == ClassConstant::kInteger && c->Matches(i)) {
-        return *c->integer();
+        return **c->integer();
       }
     }
-    IntegerConstant* result = Adopt(new IntegerConstant());
+    auto result = std::make_unique<IntegerConstant>();
     result->bytes = i;
-    return result;
+    return Adopt(std::move(result));
   }
 
-  ClassConstant* classConstant(std::string_view class_name) {
-    u2 name_index = utf8Constant(class_name)->index;
+  ClassConstant& classConstant(std::string_view class_name) {
+    u2 name_index = utf8Constant(class_name).index;
     for (auto& c : constant_pool) {
       if (c->tag() == ClassConstant::kClass && c->Matches(name_index)) {
-        return *c->clazz();
+        return **c->clazz();
       }
     }
-    ClassConstant* result = Adopt(new ClassConstant());
+    auto result = std::make_unique<ClassConstant>();
     result->name_index = name_index;
-    return result;
+    return Adopt(std::move(result));
   }
 
-  NameAndTypeConstant* nameAndTypeConstant(std::string_view name,
+  NameAndTypeConstant& nameAndTypeConstant(std::string_view name,
                                            std::string_view descriptor) {
-    u2 name_index = utf8Constant(name)->index;
-    u2 descriptor_index = utf8Constant(descriptor)->index;
+    u2 name_index = utf8Constant(name).index;
+    u2 descriptor_index = utf8Constant(descriptor).index;
     for (auto& c : constant_pool) {
       if (c->tag() == ClassConstant::kNameAndType &&
           c->Matches(name_index, descriptor_index)) {
-        return *c->nameAndType();
+        return **c->nameAndType();
       }
     }
-    NameAndTypeConstant* result = Adopt(new NameAndTypeConstant());
+    auto result = std::make_unique<NameAndTypeConstant>();
     result->name_index = name_index;
     result->descriptor_index = descriptor_index;
-    return result;
+    return Adopt(std::move(result));
   }
 
-  MethodRefConstant* methodRefConstant(std::string_view class_name,
+  MethodRefConstant& methodRefConstant(std::string_view class_name,
                                        std::string_view name,
                                        std::string_view type) {
-    u2 class_index = classConstant(class_name)->index;
-    u2 name_and_type_index = nameAndTypeConstant(name, type)->index;
+    u2 class_index = classConstant(class_name).index;
+    u2 name_and_type_index = nameAndTypeConstant(name, type).index;
     for (auto& c : constant_pool) {
       if (c->tag() == ClassConstant::kMethodref &&
           c->Matches(class_index, name_and_type_index)) {
-        return *c->methodRef();
+        return **c->methodRef();
       }
     }
-    MethodRefConstant* result = Adopt(new MethodRefConstant());
+    auto result = std::make_unique<MethodRefConstant>();
     result->class_index = class_index;
     result->name_and_type_index = name_and_type_index;
-    return result;
+    return Adopt(std::move(result));
   }
 
   MethodInfo methodInfo(u2 flags, std::string_view name,
                         std::string_view descriptor) {
-    return {flags, utf8Constant(name)->index, utf8Constant(descriptor)->index};
+    return {
+        flags, utf8Constant(name).index, utf8Constant(descriptor).index, {}};
   }
 
   std::vector<std::unique_ptr<Constant>> constant_pool;
   std::vector<MethodInfo> methods;
 };
-} // namespace
+}  // namespace
 
 std::unique_ptr<Program> Program::JavaProgram() {
   return std::make_unique<JvmProgram>();
 }
 
-} // namespace emit
+}  // namespace emit

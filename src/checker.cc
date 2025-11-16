@@ -69,7 +69,7 @@ struct RecordFieldChecker : Checker {
     }
     // > Field names, expression types, and the order thereof must exactly match
     // > those of the given record type.
-    for (int i = tf->size(); --i >= 0;) {
+    for (size_t i = 0; i < tf->size(); ++i) {
       if (assignments[i].id != tf->at(i).id) {
         emit() << "Different names " << assignments[i].id << " and "
                << tf->at(i).id << " for field #" << (i + 1) << " of record "

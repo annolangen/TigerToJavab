@@ -79,7 +79,7 @@ struct Compiler {
     out << '"' << expr.value << '"';
   }
   void operator()(const syntax::IntegerConstant& expr) { out << expr; }
-  void operator()(const syntax::Nil& expr) { out << "null"; }
+  void operator()(const syntax::Nil&) { out << "null"; }
   void operator()(const std::unique_ptr<syntax::LValue>& expr) {
     (*this)(*expr);
   }
@@ -171,9 +171,9 @@ struct Compiler {
     (*this)(*expr.body);
     out << "\n}";
   }
-  void operator()(const syntax::Break& expr) { out << "break"; }
+  void operator()(const syntax::Break&) { out << "break"; }
   void operator()(const syntax::FunctionDeclaration& expr) {
-    JavaFunction f{&expr};
+    JavaFunction f{&expr, {}};
     f.AppendDefinition(out, types, *this);
   }
   void operator()(const syntax::VariableDeclaration& decl) {
@@ -189,8 +189,8 @@ struct Compiler {
     }
     out << ";\n";
   }
-  void operator()(const syntax::TypeDeclaration& expr) {}
-  void operator()(const syntax::ArrayType& expr) { out << "TODO ArrayType"; }
+  void operator()(const syntax::TypeDeclaration&) {}
+  void operator()(const syntax::ArrayType&) { out << "TODO ArrayType"; }
   void operator()(const syntax::TypeFields& expr) {
     for (auto& field : expr) {
       out << field.type_id << " " << field.id << ";\n";
