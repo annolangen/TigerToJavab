@@ -16,9 +16,15 @@
 // The location of the current token.
 static yy::location loc;
 
+// For comment nesting.
+static int comment_depth;
+
 extern "C" int fileno(FILE *);
 %}
 %option noyywrap nounput batch debug noinput
+
+%x C_COMMENT
+
 id    [a-zA-Z][a-zA-Z_0-9]*
 int   [0-9]+
 blank [ \t]
@@ -38,6 +44,9 @@ string \"[^\"]*\"
 
 {blank}+   loc.step ();
 [\n]+      loc.lines (yyleng); loc.step ();
+
+"/*"     { comment_depth = 1; BEGIN(C_COMMENT); }
+
 "&"      return yy::Parser::make_AND(loc);
 "("      return yy::Parser::make_LPAREN(loc);
 ")"      return yy::Parser::make_RPAREN(loc);
@@ -91,6 +100,15 @@ string \"[^\"]*\"
 {id}       return yy::Parser::make_IDENTIFIER(yytext, loc);
 .          driver.error(loc, std::string("invalid character '")+yytext+"'");
 <<EOF>>    return yy::Parser::make_EOF(loc);
+
+<C_COMMENT>{
+  "/*"                { comment_depth++; loc.columns(yyleng); }
+  "*/"                { loc.columns(yyleng); if (--comment_depth == 0) BEGIN(INITIAL); }
+  [^*\n/]+            { loc.columns(yyleng); }
+  \n                  { loc.lines(yyleng); loc.step(); }
+  .                   { loc.columns(yyleng); }
+  <<EOF>>             { driver.error(loc, "unterminated comment"); return yy::Parser::make_EOF(loc); }
+}
 %%
 
 void Driver::scan_begin() {

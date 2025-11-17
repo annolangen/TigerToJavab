@@ -32,9 +32,7 @@ _Goal: Establish a modern C++ environment and build a complete Abstract Syntax T
 
 - [x] **Task 1.3: Integrate AST with Parser**
 
-- [ ] **Task 1.4: Implement an AST Printer**
-  - Create a "visitor" class that can traverse the AST and print a textual representation. This is invaluable for debugging the parser.
-  - Add a compiler flag (e.g., `--print-ast`) to invoke this printer.
+- [x] **Task 1.4: Implement an AST Printer**
 
 ## Milestone 2: Semantic Analysis
 
