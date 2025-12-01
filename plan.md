@@ -38,7 +38,7 @@ _Goal: Establish a modern C++ environment and build a complete Abstract Syntax T
 
 _Goal: Type-check the program and build a symbol table._
 
-- [ ] **Task 2.1: Design Symbol Table**
+- [x] **Task 2.1: Design Symbol Table**
 
   - Implement a `SymbolTable` class that can manage scopes. It should map identifiers (strings) to their definitions (variable type, function signature, etc.).
   - The table must support entering and exiting scopes to handle nested functions and `let` expressions.

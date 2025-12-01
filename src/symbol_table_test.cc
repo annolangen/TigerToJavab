@@ -67,5 +67,33 @@ end)");
     REQUIRE(f->parameter[0].type_id == "arrtype");
     REQUIRE(f->type_id == "int");
   }
+
+  GIVEN("mutually recursive functions") {
+    auto expr = testing::Parse(R"(
+let
+  function f(a:int):int = if a > 0 then g(a-1) else 0
+  function g(a:int):int = if a > 0 then f(a-1) else 1
+in
+  f(5)
+end)");
+    REQUIRE(expr != nullptr);
+    auto t = SymbolTable::Build(*expr);
+
+    // Check that `g` is visible from within `f`
+    const auto& f_decl =
+        std::get<FunctionDeclaration>(*std::get<Let>(*expr).declaration[0]);
+    const FunctionDeclaration* g_lookup_from_f =
+        t->lookupFunction(*f_decl.body, "g");
+    REQUIRE(g_lookup_from_f != nullptr);
+    REQUIRE(g_lookup_from_f->id == "g");
+
+    // Check that `f` is visible from within `g`
+    const auto& g_decl =
+        std::get<FunctionDeclaration>(*std::get<Let>(*expr).declaration[1]);
+    const FunctionDeclaration* f_lookup_from_g =
+        t->lookupFunction(*g_decl.body, "f");
+    REQUIRE(f_lookup_from_g != nullptr);
+    REQUIRE(f_lookup_from_g->id == "f");
+  }
 }
 }  // namespace

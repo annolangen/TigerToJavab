@@ -118,6 +118,20 @@ struct StBuilder {
     Scope* prev = current;
     scopes.emplace_back(std::make_unique<Scope>(Scope{.parent = current}));
     current = scopes.back().get();
+    // First pass: add all declarations to the new scope.
+    for (const auto& decl : v.declaration) {
+      std::visit(Overloaded{[&](const TypeDeclaration& d) {
+                              current->type[d.id] = &d;
+                            },
+                            [&](const FunctionDeclaration& d) {
+                              current->function[d.id] = &d;
+                            },
+                            [&](const VariableDeclaration& d) {
+                              current->storage[d.id] = &d;
+                            }},
+                 *decl);
+    }
+    // Second pass: visit children to handle nested scopes and expressions.
     if (!VisitChildren(v, *this)) return false;
     current = prev;
     return true;
