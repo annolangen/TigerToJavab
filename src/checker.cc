@@ -152,6 +152,7 @@ struct ConditionalChecker : Checker {
   }
 };
 
+// Nil may only be used for records with known type (2.7)
 struct NilChecker : Checker {
   NilChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
       : Checker{errors, symbols, tf} {}
@@ -180,6 +181,7 @@ struct NilChecker : Checker {
   }
 };
 
+// Applies the given checker first to root and then all its children.
 template <class C>
 void CheckBelow(const Expr& root, C&& checker) {
   checker(root);
