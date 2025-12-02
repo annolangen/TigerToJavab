@@ -1,6 +1,7 @@
 #include "checker.h"
 
 #include <functional>
+#include <iostream>
 #include <sstream>
 #include <string_view>
 #include <unordered_set>
@@ -151,44 +152,32 @@ struct ConditionalChecker : Checker {
   }
 };
 
-// Nil may only be used for records with known type (2.7)
-// When comparing with nil, the other operand must be of a record type.
-struct NilComparisonChecker : Checker {
-  NilComparisonChecker(Errors& errors, const SymbolTable& symbols,
-                       TypeFinder& tf)
+struct NilChecker : Checker {
+  NilChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
       : Checker{errors, symbols, tf} {}
   using Checker::operator();
 
-  bool operator()(const Binary& e) {
-    other_operand_ = e.right.get();
-    std::visit(*this, *e.left);
-    other_operand_ = e.left.get();
-    std::visit(*this, *e.right);
-    other_operand_ = nullptr;
-    return true;
-  }
-  bool operator()(const Nil&) {
-    if (!other_operand_) return true;  // Not in a binary expression
-    std::string_view type = get_type(*other_operand_);
-    const TypeDeclaration* decl =
-        symbols.lookupUnaliasedType(*other_operand_, type);
-    if (decl == nullptr) {
-      // It might be a primitive type like 'int' or 'string' which won't be in
-      // the type declaration table.
-      if (type == "int" || type == "string") {
-        emit() << "Type " << type << " is not a record type for nil comparison";
-        return false;
-      }
-      emit() << "Unknown record type " << type;
-      return false;
+  void CheckRecordType(std::string_view type, const Expr& e) {
+    const TypeDeclaration* decl = symbols.lookupUnaliasedType(e, type);
+    if (decl == nullptr || !std::get_if<TypeFields>(&decl->value)) {
+      emit() << "Type " << type << " is not a record type";
     }
-    if (!std::get_if<TypeFields>(&decl->value)) {
-      emit() << "Type " << type << " is not a record type for nil comparison";
-      return false;
+  }
+
+  bool operator()(const Expr& e) {
+    const Binary* b = std::get_if<Binary>(&e);
+    if (b && std::get_if<Nil>(b->left.get())) {
+      CheckRecordType(get_type(*b->right), e);
+    }
+    if (b && std::get_if<Nil>(b->right.get())) {
+      CheckRecordType(get_type(*b->left), e);
+    }
+    const Assignment* a = std::get_if<Assignment>(&e);
+    if (a && std::get_if<Nil>(a->expr.get())) {
+      CheckRecordType(get_type.GetLValueType(e, *a->l_value), e);
     }
     return true;
   }
-  const Expr* other_operand_ = nullptr;
 };
 
 template <class C>
@@ -214,6 +203,6 @@ void CheckBelow(const Expr& root, Errors& errors, const SymbolTable& t,
 Errors ListErrors(const Expr& root, const SymbolTable& t, TypeFinder& tf) {
   Errors errors;
   CheckBelow<RecordFieldChecker, BinaryOpChecker, ConditionalChecker,
-             NilComparisonChecker>(root, errors, t, tf);
+             NilChecker>(root, errors, t, tf);
   return errors;
 }

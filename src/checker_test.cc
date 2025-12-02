@@ -121,7 +121,7 @@ in
   i = nil
 end)");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] == "Type int is not a record type for nil comparison");
+      REQUIRE(errors[0] == "Type int is not a record type");
     }
 
     WHEN("comparing with a string") {
@@ -132,8 +132,7 @@ in
   nil = s
 end)");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] ==
-              "Type string is not a record type for nil comparison");
+      REQUIRE(errors[0] == "Type string is not a record type");
     }
 
     WHEN("comparing with a record type alias") {
@@ -157,7 +156,50 @@ in
   i = nil
 end)");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] == "Type int is not a record type for nil comparison");
+      REQUIRE(errors[0] == "Type myint is not a record type");
+    }
+  }
+
+  GIVEN("nil assignment") {
+    WHEN("assigning to a record type") {
+      auto errors = Check(R"(
+let
+  type myrec = { a: int }
+  var r: myrec := nil
+in
+  r := nil
+end)");
+      REQUIRE(errors.empty());
+    }
+
+    WHEN("assigning to an int") {
+      auto errors = Check(R"(
+let
+  var i := 0
+in
+  i := nil
+end)");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Type int is not a record type");
+    }
+
+    WHEN("assigning to a record type alias") {
+      auto errors = Check(R"(
+let
+  type myrec = { a: int }
+  type rec_alias = myrec
+  var r: rec_alias := nil
+in
+  r := nil
+end)");
+      REQUIRE(errors.empty());
+    }
+
+    WHEN("assigning to a non-record type alias") {
+      auto errors =
+          Check(R"(let type myint = int var i: myint := 0 in i := nil end)");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Type myint is not a record type");
     }
   }
 }
