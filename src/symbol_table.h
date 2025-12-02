@@ -29,6 +29,11 @@ class SymbolTable {
   virtual const syntax::TypeDeclaration* lookupType(
       const syntax::Expr& expr, std::string_view name) const = 0;
 
+  // Returns type declaration with given name visible in given expression,
+  // traversing any type aliases.
+  virtual const syntax::TypeDeclaration* lookupUnaliasedType(
+      const syntax::Expr& expr, std::string_view name) const = 0;
+
   virtual StorageLocation lookupStorageLocation(
       const syntax::Expr& expr, std::string_view name) const = 0;
 

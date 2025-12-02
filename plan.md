@@ -44,11 +44,20 @@ _Goal: Type-check the program and build a symbol table._
   - The table must support entering and exiting scopes to handle nested functions and `let` expressions.
 
 - [ ] **Task 2.2: Implement Semantic Checker (Visitor)**
-  - Create a new visitor that traverses the AST.
-  - Populate the symbol table with declarations.
-  - Perform type checking for all expressions (e.g., ensure `+` is used on integers, array indexing is on an array type).
-  - Verify function calls match their definitions.
-  - Report clear, user-friendly error messages for semantic violations.
+  - [x] Create a visitor that traverses the AST (`checker.cc`).
+  - [x] Check record literal field names and types.
+  - [x] Check binary operator type constraints (`<`, `>`, `&`, `|`).
+  - [x] Check that `if`/`while` conditions are integers.
+  - [ ] **Check type matching for variable declarations and assignments.**
+  - [ ] **Check function calls:** Verify argument count and types match the function signature.
+  - [ ] **Check `if-then-else`:** Ensure `then` and `else` branches have compatible types.
+  - [ ] **Check loop constraints:**
+    - [ ] Loop body must not produce a value.
+    - [ ] `for` loop variable is read-only.
+    - [ ] `break` is only used inside a loop.
+  - [ ] **Check `nil` usage:** `nil` is only assignable to record types.
+  - [ ] **Check for duplicate definitions** in the same scope.
+  - [ ] **Check for illegal recursive type declarations** (cycles not involving a record/array).
 
 ## Milestone 3: Java Bytecode Generation
 

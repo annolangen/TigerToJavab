@@ -31,7 +31,7 @@ struct Checker {
   TypeFinder& get_type;
 };
 
-static std::unordered_set<std::string_view> kBuiltinTypes {"int", "string" };
+static std::unordered_set<std::string_view> kBuiltinTypes{"int", "string"};
 
 // Record literal field names, expression types, and the order
 // thereof must exactly match those of the given record type (2.3)
@@ -151,6 +151,46 @@ struct ConditionalChecker : Checker {
   }
 };
 
+// Nil may only be used for records with known type (2.7)
+// When comparing with nil, the other operand must be of a record type.
+struct NilComparisonChecker : Checker {
+  NilComparisonChecker(Errors& errors, const SymbolTable& symbols,
+                       TypeFinder& tf)
+      : Checker{errors, symbols, tf} {}
+  using Checker::operator();
+
+  bool operator()(const Binary& e) {
+    other_operand_ = e.right.get();
+    std::visit(*this, *e.left);
+    other_operand_ = e.left.get();
+    std::visit(*this, *e.right);
+    other_operand_ = nullptr;
+    return true;
+  }
+  bool operator()(const Nil&) {
+    if (!other_operand_) return true;  // Not in a binary expression
+    std::string_view type = get_type(*other_operand_);
+    const TypeDeclaration* decl =
+        symbols.lookupUnaliasedType(*other_operand_, type);
+    if (decl == nullptr) {
+      // It might be a primitive type like 'int' or 'string' which won't be in
+      // the type declaration table.
+      if (type == "int" || type == "string") {
+        emit() << "Type " << type << " is not a record type for nil comparison";
+        return false;
+      }
+      emit() << "Unknown record type " << type;
+      return false;
+    }
+    if (!std::get_if<TypeFields>(&decl->value)) {
+      emit() << "Type " << type << " is not a record type for nil comparison";
+      return false;
+    }
+    return true;
+  }
+  const Expr* other_operand_ = nullptr;
+};
+
 template <class C>
 void CheckBelow(const Expr& root, C&& checker) {
   checker(root);
@@ -173,7 +213,7 @@ void CheckBelow(const Expr& root, Errors& errors, const SymbolTable& t,
 
 Errors ListErrors(const Expr& root, const SymbolTable& t, TypeFinder& tf) {
   Errors errors;
-  CheckBelow<RecordFieldChecker, BinaryOpChecker, ConditionalChecker>(
-      root, errors, t, tf);
+  CheckBelow<RecordFieldChecker, BinaryOpChecker, ConditionalChecker,
+             NilComparisonChecker>(root, errors, t, tf);
   return errors;
 }

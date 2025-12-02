@@ -63,6 +63,17 @@ class St : public SymbolTable {
     return nullptr;
   }
 
+  const TypeDeclaration* lookupUnaliasedType(
+      const Expr& expr, std::string_view name) const override {
+    const TypeDeclaration* decl = lookupType(expr, name);
+    while (decl) {
+      const auto* alias = std::get_if<Identifier>(&decl->value);
+      if (!alias) return decl;
+      decl = lookupType(expr, *alias);
+    }
+    return nullptr;
+  }
+
   std::string toString() const override {
     std::ostringstream out;
     out << "SymbolTable{ #scopes: " << scopes_.size()

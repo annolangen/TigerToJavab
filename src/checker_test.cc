@@ -101,6 +101,65 @@ SCENARIO("Static checking", "[checker]") {
       REQUIRE(errors[0] == "Conditions must be int, but got string");
     }
   }
+  GIVEN("nil comparison") {
+    WHEN("comparing with a record type") {
+      auto errors = Check(R"(
+let
+  type myrec = { a: int }
+  var r: myrec := nil
+in
+  r = nil
+end)");
+      REQUIRE(errors.empty());
+    }
+
+    WHEN("comparing with an int") {
+      auto errors = Check(R"(
+let
+  var i := 0
+in
+  i = nil
+end)");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Type int is not a record type for nil comparison");
+    }
+
+    WHEN("comparing with a string") {
+      auto errors = Check(R"(
+let
+  var s := ""
+in
+  nil = s
+end)");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] ==
+              "Type string is not a record type for nil comparison");
+    }
+
+    WHEN("comparing with a record type alias") {
+      auto errors = Check(R"(
+let
+  type myrec = { a: int }
+  type rec_alias = myrec
+  var r: rec_alias := nil
+in
+  r <> nil
+end)");
+      REQUIRE(errors.empty());
+    }
+
+    WHEN("comparing with a non-record type alias") {
+      auto errors = Check(R"(
+let
+  type myint = int
+  var i: myint := 0
+in
+  i = nil
+end)");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Type int is not a record type for nil comparison");
+    }
+  }
 }
 
 }  // namespace

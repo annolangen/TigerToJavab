@@ -10,23 +10,6 @@ std::string operator+(std::string&& s, std::string_view v) {
   return std::move(s);
 }
 
-// Returns syntax::Type* that holds either TypeFields or ArrayType for the given
-// type-id. Traverses chain of alias types. Returns nullptr on error.
-const Type* UnwrapTypeAliases(std::string_view type_id, const Expr& expr,
-                              const SymbolTable& symbols,
-                              std::vector<std::string>& errors) {
-  const TypeDeclaration* td = symbols.lookupType(expr, type_id);
-  while (true) {
-    if (!td) {
-      errors.emplace_back("Type not found: " + type_id);
-      return nullptr;
-    }
-    const std::string* alias = std::get_if<Identifier>(&td->value);
-    if (!alias) return &td->value;
-    td = symbols.lookupType(expr, *alias);
-  }
-}
-
 }  // namespace
 
 std::string_view TypeFinder::operator()(const Expr& id) {
@@ -107,10 +90,13 @@ std::string_view TypeFinder::GetLValueType(const Expr& parent,
             // Example: `foo.bar`
             std::string_view record_type =
                 this->GetLValueType(parent, *rf.l_value);
-            const Type* t =
-                UnwrapTypeAliases(record_type, parent, symbols_, errors_);
-            if (!t) return "NOTYPE";
-            const auto* tf = std::get_if<TypeFields>(t);
+            const TypeDeclaration* td =
+                symbols_.lookupUnaliasedType(parent, record_type);
+            if (!td) {
+              errors_.emplace_back("Type not found: " + record_type);
+              return "NOTYPE";
+            }
+            const auto* tf = std::get_if<TypeFields>(&td->value);
             if (!tf) {
               errors_.emplace_back("Record type expected: " + record_type);
               return "NOTYPE";
@@ -129,10 +115,13 @@ std::string_view TypeFinder::GetLValueType(const Expr& parent,
             // Example: `foo[7]`
             std::string_view array_type =
                 this->GetLValueType(parent, *ae.l_value);
-            const Type* t =
-                UnwrapTypeAliases(array_type, parent, symbols_, errors_);
-            if (!t) return "NOTYPE";
-            const auto* at = std::get_if<ArrayType>(t);
+            const TypeDeclaration* td =
+                symbols_.lookupUnaliasedType(parent, array_type);
+            if (!td) {
+              errors_.emplace_back("Type not found: " + array_type);
+              return "NOTYPE";
+            }
+            const auto* at = std::get_if<ArrayType>(&td->value);
             if (!at) {
               errors_.emplace_back("Array type expected: " + array_type);
               return "NOTYPE";
