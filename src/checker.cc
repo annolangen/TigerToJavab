@@ -118,6 +118,7 @@ struct RecordFieldChecker : Checker {
 struct BinaryOpChecker : Checker {
   BinaryOpChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
       : Checker{errors, symbols, tf} {}
+
   void operator()(const auto&) {}
   void operator()(const Expr& e) {
     const Binary* b = std::get_if<Binary>(&e);
@@ -138,6 +139,7 @@ struct BinaryOpChecker : Checker {
         break;
     }
   }
+
   void CheckComparison(std::string_view left_type, std::string_view right_type,
                        BinaryOp op) {
     CheckPrimitive(left_type, op);
@@ -189,12 +191,6 @@ struct NilChecker : Checker {
   NilChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
       : Checker{errors, symbols, tf} {}
 
-  void CheckRecordType(std::string_view type, const Expr& e) {
-    const TypeDeclaration* decl = symbols.lookupUnaliasedType(e, type);
-    if (decl == nullptr || !std::get_if<TypeFields>(&decl->value)) {
-      emit() << "Type " << type << " is not a record type";
-    }
-  }
   void operator()(const auto&) {}
   void operator()(const Expr& e) {
     const Binary* b = std::get_if<Binary>(&e);
@@ -207,6 +203,13 @@ struct NilChecker : Checker {
     const Assignment* a = std::get_if<Assignment>(&e);
     if (a && std::get_if<Nil>(a->expr.get())) {
       CheckRecordType(get_type.GetLValueType(e, *a->l_value), e);
+    }
+  }
+
+  void CheckRecordType(std::string_view type, const Expr& e) {
+    const TypeDeclaration* decl = symbols.lookupUnaliasedType(e, type);
+    if (decl == nullptr || !std::get_if<TypeFields>(&decl->value)) {
+      emit() << "Type " << type << " is not a record type";
     }
   }
 };
