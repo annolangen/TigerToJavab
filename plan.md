@@ -45,17 +45,17 @@ _Goal: Type-check the program and build a symbol table._
 
 - [ ] **Task 2.2: Implement Semantic Checker (Visitor)**
   - [x] Create a visitor that traverses the AST (`checker.cc`).
-  - [x] Check record literal field names and types.
-  - [x] Check binary operator type constraints (`<`, `>`, `&`, `|`).
-  - [x] Check that `if`/`while` conditions are integers.
-  - [ ] **Check type matching for variable declarations and assignments.**
+  - [x] Check record literal field names and types. (`test_record_lit_field_type_mismatch`)
+  - [x] Check binary operator type constraints (`<`, `>`, `&`, `|`). (`test_op_type_mismatch`)
+  - [x] Check that `if`/`while` conditions are integers. (`test_if_cond_type_mismatch`, `test_while_cond_type_mismatch`)
+  - [x] **Check type matching for variable declarations and assignments.** (`test_var_decl_type_mismatch`, `test_assign_type_mismatch`)
   - [ ] **Check function calls:** Verify argument count and types match the function signature.
   - [ ] **Check `if-then-else`:** Ensure `then` and `else` branches have compatible types.
   - [ ] **Check loop constraints:**
     - [ ] Loop body must not produce a value.
     - [ ] `for` loop variable is read-only.
     - [ ] `break` is only used inside a loop.
-  - [ ] **Check `nil` usage:** `nil` is only assignable to record types.
+  - [x] **Check `nil` usage:** `nil` is only assignable to record types. (`test_nil_assign_to_int`)
   - [ ] **Check for duplicate definitions** in the same scope.
   - [ ] **Check for illegal recursive type declarations** (cycles not involving a record/array).
 
