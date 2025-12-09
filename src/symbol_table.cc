@@ -55,6 +55,7 @@ class St : public SymbolTable {
     return nullptr;
   }
 
+
   const TypeDeclaration* lookupType(const Expr& expr,
                                     std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
@@ -143,6 +144,16 @@ struct StBuilder {
                  *decl);
     }
     // Second pass: visit children to handle nested scopes and expressions.
+    if (!VisitChildren(v, *this)) return false;
+    current = prev;
+    return true;
+  }
+
+  bool operator()(const For& v) {
+    Scope* prev = current;
+    scopes.emplace_back(std::make_unique<Scope>(Scope{.parent = current}));
+    current = scopes.back().get();
+    current->storage[v.id] = &v;
     if (!VisitChildren(v, *this)) return false;
     current = prev;
     return true;

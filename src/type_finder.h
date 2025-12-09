@@ -19,6 +19,11 @@ class TypeFinder {
   TypeFinder& operator=(TypeFinder&&) = delete;
 
   // Returns the type-id of the given expression, or "NOTYPE" in case of errors.
+  // NOTE:
+  // - For simple types and aliases, this returns the declared name (e.g. "myint").
+  // - For the special `nil` value, this returns "NOTYPE" or "nil" depending on context,
+  //   requiring specific handling in checkers (e.g. `is_nil` checks).
+  // - Loop variables are resolved to "int".
   std::string_view operator()(const syntax::Expr& id);
   std::string_view operator()(const syntax::VariableDeclaration& vd) {
     return vd.type_id ? *vd.type_id : (*this)(*vd.value);

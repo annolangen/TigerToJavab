@@ -145,6 +145,10 @@ Overloaded(F...) -> Overloaded<F...>;
 
 // Overloaded template function for visiting child nodes. Returns false to
 // indicate stop.
+// NOTE: This utility allows generic traversal over both `std::variant` nodes
+// (like `Expr`, `Declaration`) and concrete structs (like `IfThen`, `For`).
+// When visiting a variant, it automatically dispatches to the active alternative.
+// Use this for recursive checkers to avoid writing manual `std::visit` boilerplate.
 template <class F>
 bool VisitChildren(const StringConstant&, F&&) {
   return true;

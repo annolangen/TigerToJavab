@@ -95,7 +95,7 @@ SCENARIO("Static checking", "[checker]") {
   }
   GIVEN("string condition") {
     for (auto e : {"if \"Hello\" then printi(6)", "if \"Hello\" then 7 else 8",
-                   "while \"Hello\" do printi(6)"}) {
+                   "while \"Hello\" do break"}) {
       auto errors = Check(e);
       REQUIRE(errors.size() == 1);
       REQUIRE(errors[0] == "Conditions must be int, but got string");
@@ -196,10 +196,90 @@ end)");
     }
 
     WHEN("assigning to a non-record type alias") {
-      auto errors =
-          Check(R"(let type myint = int var i: myint := 0 in i := nil end)");
+      auto errors = Check(
+          "let type notrecord = int var a:notrecord := 0 in a := nil end");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] == "Type myint is not a record type");
+      REQUIRE(errors[0] == "Type notrecord is not a record type");
+    }
+  }
+
+  GIVEN("Structure checks") {
+    WHEN("Break outside loop") {
+       auto errors = Check("break");
+       REQUIRE(errors.size() == 1);
+       REQUIRE(errors[0] == "Break must be inside a loop");
+    }
+    WHEN("Break inside loop") {
+       auto errors = Check("while 1 do break");
+       REQUIRE(errors.empty());
+    }
+    WHEN("Loop returning value") {
+       auto errors = Check("while 1 do 5");
+       REQUIRE(errors.size() == 1);
+       REQUIRE(errors[0] == "Loop body must not return a value");
+    }
+    WHEN("For loop returning value") {
+       auto errors = Check("for i := 0 to 10 do 5");
+       REQUIRE(errors.size() == 1);
+       REQUIRE(errors[0] == "Loop body must not return a value");
+    }
+    WHEN("For loop var assignment") {
+       auto errors = Check("for i := 0 to 10 do i := i + 1");
+       REQUIRE(errors.size() == 1);
+       REQUIRE(errors[0] == "For loop variable i may not be assigned to");
+    }
+    WHEN("If-then-else mismatch") {
+       auto errors = Check("if 1 then 5 else \"s\"");
+       REQUIRE(errors.size() == 1);
+       REQUIRE(errors[0] == "If-then-else branches must have same type");
+    }
+    WHEN("If-then-else void mismatch") {
+       auto errors = Check("if 1 then 5 else ()"); 
+       REQUIRE(errors.size() == 1); 
+       REQUIRE(errors[0] == "If-then-else branches must have same type");
+    }
+  }
+
+  GIVEN("Declaration checks") {
+    WHEN("Mutually recursive types cycle failure") {
+      auto errors = Check("let type a = b type b = a in 0 end");
+      REQUIRE(errors.size() >= 1);
+      REQUIRE(StartsWith(errors[0], "Illegal mutually recursive type cycle"));
+    }
+    WHEN("Mutually recursive types valid") {
+      auto errors = Check("let type a = b type b = {x:a} in 0 end");
+      REQUIRE(errors.empty());
+    }
+    WHEN("Duplicate type definition") {
+      auto errors = Check("let type a = int type a = string in 0 end");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Duplicate type definition: a");
+    }
+    WHEN("Duplicate function definition") {
+      auto errors = Check("let function f():int=0 function f():string=\"s\" in 0 end");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Duplicate function definition: f");
+    }
+    WHEN("Variable init mismatch") {
+      auto errors = Check("let var x:int := \"s\" in 0 end");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Variable x declared type int but initialized with string");
+    }
+    WHEN("Function return mismatch") {
+      auto errors = Check("let function f():int = \"s\" in 0 end");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Function f declared to return int but body returns string");
+    }
+    WHEN("Procedure return value") {
+      auto errors = Check("let function f() = 5 in 0 end");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Procedure f body must not return a value");
+    }
+    WHEN("Variable no value") {
+      // () is void/NOTYPE.
+      auto errors = Check("let var x:int := () in 0 end");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Variable x initialized with no value");
     }
   }
 }

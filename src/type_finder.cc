@@ -80,6 +80,9 @@ std::string_view TypeFinder::GetLValueType(const Expr& parent,
                     [&](const TypeField* tf) -> std::string_view {
                       return tf->type_id;
                     },
+                    [&](const For*) -> std::string_view {
+                      return "int";
+                    },
                     [&](std::nullptr_t) -> std::string_view {
                       errors_.emplace_back("Variable not found: " + name);
                       return "NOTYPE";

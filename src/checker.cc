@@ -41,17 +41,15 @@ struct Checker {
 //
 // Performs a pre-order traversal starting from `root`. Invokes the provided
 // `checker` on the current node, then recursively on its children.
-template <class C>
-void CheckBelow(const Expr& root, C&& checker) {
+// NOTE: This performs a DEEP traversal. Use `VisitChildren` internally to ensure
+// recursion continues through all node types.
+template <class C, class Node>
+void CheckBelow(const Node& root, C&& checker) {
   checker(root);
-  std::visit(
-      [&](const auto& n) {
-        VisitChildren(n, [&](const auto& child) {
-          checker(child);
-          return true;
-        });
-      },
-      root);
+  VisitChildren(root, [&](const auto& child) {
+    CheckBelow(child, checker);
+    return true;
+  });
 }
 
 // Runs several checkers sequentially.
@@ -213,11 +211,262 @@ struct NilChecker : Checker {
     }
   }
 };
+
+// - Mutually recursive type declrations must pass through a record or
+//   array type (3.1)
+// - No two defined types in such a sequence may have the same name (3.1)
+// - Assigned expression in variable declaration must have a value (3.2)
+// - No two functions in a declaration sequence may have the same name (3.3)
+// - Functions return a value of the specified type (3.3)
+struct DeclarationChecker : Checker {
+  DeclarationChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
+      : Checker{errors, symbols, tf} {}
+
+  void operator()(const auto&) {}
+
+  void operator()(const Expr& e) {
+    if (const auto* l = std::get_if<Let>(&e)) (*this)(*l);
+  }
+
+  void operator()(const Declaration& d) {
+    std::visit([&](const auto& v) { (*this)(v); }, d);
+  }
+
+  void operator()(const Let& l) {
+    auto chunks = GroupDeclarations(l.declaration);
+    for (const auto& chunk : chunks) {
+      if (std::holds_alternative<const TypeDeclaration*>(chunk[0])) {
+        CheckTypeGroup(chunk);
+      } else if (std::holds_alternative<const FunctionDeclaration*>(chunk[0])) {
+        CheckFunctionGroup(chunk);
+      }
+    }
+  }
+
+  void operator()(const VariableDeclaration& v) {
+    bool is_nil = std::holds_alternative<Nil>(*v.value);
+    std::string_view type = is_nil ? "nil" : get_type(*v.value);
+
+    if (type == "NOTYPE") {
+      emit() << "Variable " << v.id << " initialized with no value";
+    }
+    if (v.type_id) {
+       std::string_view declared_type = *v.type_id;
+       const TypeDeclaration* td = symbols.lookupType(*v.value, declared_type);
+       while(td) {
+          if (const auto* alias = std::get_if<Identifier>(&td->value)) {
+              declared_type = *alias;
+              td = symbols.lookupType(*v.value, declared_type);
+          } else {
+              break;
+          }
+       }
+
+       if (type != declared_type && type != "NOTYPE" && type != "nil") { 
+          // Basic string mismatch check resolved.
+          emit() << "Variable " << v.id << " declared type " << *v.type_id << " but initialized with " << type;
+       } else {
+           if (type == "nil") {
+             // Check for nil assignment to record
+             const TypeDeclaration* decl = symbols.lookupUnaliasedType(*v.value, *v.type_id);
+             if (!decl || !std::get_if<TypeFields>(&decl->value)) {
+                 emit() << "Nil may only be used for records with known type";
+             }
+         }
+       }
+    } else { // No type declared
+        if (type == "nil") {
+             emit() << "Nil may only be used for records with known type";
+        }
+    }
+  }
+
+  void operator()(const FunctionDeclaration& f) {
+    std::string_view body_type = get_type(*f.body);
+    if (f.type_id) {
+      if (body_type != *f.type_id) {
+        emit() << "Function " << f.id << " declared to return " << *f.type_id << " but body returns " << body_type;
+      }
+    } else {
+      if (body_type != "NOTYPE") {
+        emit() << "Procedure " << f.id << " body must not return a value";
+      }
+    }
+  }
+
+ private:
+  using DeclPtr = std::variant<const TypeDeclaration*, const VariableDeclaration*, const FunctionDeclaration*>;
+  
+  std::vector<std::vector<DeclPtr>> GroupDeclarations(const std::vector<std::unique_ptr<Declaration>>& decls) {
+      std::vector<std::vector<DeclPtr>> chunks;
+      if (decls.empty()) return chunks;
+      
+      chunks.push_back({});
+      for (const auto& d : decls) {
+          DeclPtr current = std::visit([](const auto& x) -> DeclPtr { return &x; }, *d);
+          if (chunks.back().empty()) {
+              chunks.back().push_back(current);
+          } else {
+              if (current.index() == chunks.back().back().index() && current.index() != 1) { // Same type and not Variable(1)
+                  chunks.back().push_back(current);
+              } else {
+                  chunks.push_back({current});
+              }
+          }
+      }
+      return chunks;
+  }
+
+  void CheckTypeGroup(const std::vector<DeclPtr>& group) {
+      std::unordered_set<std::string_view> names;
+      for (const auto& d : group) {
+          const auto* td = std::get<const TypeDeclaration*>(d);
+          if (!names.insert(td->id).second) {
+              emit() << "Duplicate type definition: " << td->id;
+          }
+      }
+      // Cycle check
+      for (const auto& d : group) {
+          const auto* td = std::get<const TypeDeclaration*>(d);
+          if (HasIllegalCycle(td, group)) {
+              emit() << "Illegal mutually recursive type cycle for " << td->id;
+          }
+      }
+  }
+  
+  bool HasIllegalCycle(const TypeDeclaration* start, const std::vector<DeclPtr>& group) {
+      // Valid cycle must pass through Record or Array.
+      // Illegal cycle: definitions are just aliases of each other in the group.
+      // e.g. type a = b; type b = a;
+      // Start BFS/DFS from start. If we hit start again without passing record/array, illegal.
+      // Only traverse references within the group.
+      std::unordered_set<std::string_view> visited;
+      std::vector<const TypeDeclaration*> q;
+      q.push_back(start);
+      visited.insert(start->id);
+      
+      size_t index = 0;
+      while(index < q.size()) {
+          const TypeDeclaration* curr = q[index++];
+          // Check RHS.
+          if (const auto* alias = std::get_if<Identifier>(&curr->value)) {
+             // Find definition in group
+             auto it = std::find_if(group.begin(), group.end(), [&](DeclPtr p){
+                 return std::get<const TypeDeclaration*>(p)->id == *alias;
+             });
+             if (it != group.end()) {
+                 const TypeDeclaration* next = std::get<const TypeDeclaration*>(*it);
+                 if (next == start) return true; // Cycle found!
+                 if (visited.insert(next->id).second) {
+                     q.push_back(next);
+                 }
+             }
+          }
+          // If RHS is Record or Array, cycle is broken (valid). Do not traverse further.
+      }
+      return false;
+  }
+
+  void CheckFunctionGroup(const std::vector<DeclPtr>& group) {
+      std::unordered_set<std::string_view> names;
+      for (const auto& d : group) {
+          const auto* fd = std::get<const FunctionDeclaration*>(d);
+          if (!names.insert(fd->id).second) {
+              emit() << "Duplicate function definition: " << fd->id;
+          }
+      }
+  }
+};
+
+
+// - If-then-else branches must be of the same type or both not return
+//   a value (2.8)
+// - Loop body must not return a value (2.8)
+// - For loop variable may not be assigned to (2.8)
+// - Break expression is illegal outside loop bodies
+struct StructureChecker {
+  StructureChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
+      : errors(errors), symbols(symbols), get_type(tf) {}
+
+  Errors& errors;
+  const SymbolTable& symbols;
+  TypeFinder& get_type;
+  int loops_entered = 0;
+
+  Emitter emit() { return {errors}; }
+
+  void Check(const Expr& e) {
+    if (const auto* loop = std::get_if<While>(&e)) {
+      if (get_type(*loop->body) != "NOTYPE") {
+        emit() << "Loop body must not return a value";
+      }
+      Check(*loop->condition);
+      loops_entered++;
+      Check(*loop->body);
+      loops_entered--;
+      return;
+    } else if (const auto* loop = std::get_if<For>(&e)) {
+      if (get_type(*loop->body) != "NOTYPE") {
+        emit() << "Loop body must not return a value";
+      }
+      Check(*loop->start);
+      Check(*loop->end);
+      loops_entered++;
+      Check(*loop->body);
+      loops_entered--;
+      return;
+    } else if (const auto* ite = std::get_if<IfThenElse>(&e)) {
+      CheckBranchTypes(*ite->then_expr, *ite->else_expr);
+    } else if (std::get_if<Break>(&e)) {
+      if (loops_entered == 0) {
+        emit() << "Break must be inside a loop";
+      }
+    } else if (const auto* assign = std::get_if<Assignment>(&e)) {
+      if (const auto* id = std::get_if<Identifier>(assign->l_value.get())) {
+        StorageLocation loc = symbols.lookupStorageLocation(e, *id);
+        if (std::holds_alternative<const For*>(loc)) {
+          emit() << "For loop variable " << *id << " may not be assigned to";
+        }
+      }
+    }
+
+    // Generic recursion
+    VisitChildren(e, [&](const auto& child) {
+      Check(child);
+      return true;
+    });
+  }
+
+  template <class T>
+  void Check(const T& e) {
+    VisitChildren(e, [&](const auto& child) {
+      Check(child);
+      return true;
+    });
+  }
+
+  void CheckBranchTypes(const Expr& then_e, const Expr& else_e) {
+    if (get_type(then_e) != get_type(else_e)) {
+      // If one is void, it's fine? No, "Branches must be of the same type OR both not return a value".
+      // "Both not return a value" == Both void.
+      // So if both void -> Same type.
+      // If one void, one int -> different type -> Error.
+      // The rule effectively means: Types must match. (Void is a type).
+      // Wait, "or both not return a value" implies void is "no value".
+      // Tiger semantics: If expressions must produce a value if used in value context.
+      // If `if-then-else` returns void, then both branches must return void.
+      // So checking `type != type` is sufficient.
+      emit() << "If-then-else branches must have same type";
+    }
+  }
+};
+
 }  // namespace
 
 Errors ListErrors(const Expr& root, const SymbolTable& t, TypeFinder& tf) {
   Errors errors;
-  CheckBelow<RecordFieldChecker, BinaryOpChecker, ConditionalChecker,
-             NilChecker>(root, errors, t, tf);
+  CheckBelow<DeclarationChecker, RecordFieldChecker, BinaryOpChecker,
+             ConditionalChecker, NilChecker>(root, errors, t, tf);
+  StructureChecker(errors, t, tf).Check(root);
   return errors;
 }
