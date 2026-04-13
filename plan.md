@@ -59,6 +59,10 @@ _Goal: Type-check the program and build a symbol table._
   - [x] **Check for duplicate definitions** in the same scope.
   - [x] **Check for illegal recursive type declarations** (cycles not involving a record/array).
 
+- [ ] **Task 2.3: Activation Records (Static Links)**
+  - Design a mechanism for the `SymbolTable` (or a dedicated pass) to determine the path of activation records needed to access referenced outer-scope variables.
+  - Compute which variables escape their local scope and must be stored in heap-allocated Activation Record (Frame) classes.
+
 ## Milestone 3: Java Bytecode Generation
 
 _Goal: Translate the validated AST into `.class` files._

@@ -38,3 +38,54 @@ The backend is responsible for taking the verified AST from the frontend and gen
 ## 3. Testing
 
 The project includes an integrated testing framework, invoked via `make test`. The testing infrastructure code is located in `src/testing/`. This setup is intended to validate the compiler's output against a set of known Tiger programs.
+
+## 4. Design Notes
+
+### 4.1. Translating Lexical Scopes to JVM (Activation Records)
+
+Translating Tiger's lexically nested closures to the JVM requires handling mutable variables that are accessed across scope boundaries. Because JVM local variables are strictly confined to a method's stack frame, variables accessed by inner functions must be hoisted into heap-allocated objects.
+
+The compiler achieves this by emitting "Frame" (or Scope) classes. Every Tiger function compiles exactly into a flat `static` method in the `Main` class. When a function declares nested functions that capture variables, it instantiates a Frame object representing its Activation Record. A "Static Link" (pointer to the parent's Frame) is passed as a hidden first argument to all functions to safely maintain the lexical scope chain across the JVM.
+
+**Tiger Source Example:**
+```tiger
+let
+  var x := 5
+  function f(y: int): int =
+    let var z := x + y
+        function g(): int = z + x
+    in g() end
+in f(10) end
+```
+
+**JVM Equivalent (Java Source Approximation):**
+```java
+// Frame structures emitted as plain data classes in JVM
+class FrameMain { int x; }
+class FrameF { FrameMain static_link; int y; int z; }
+
+class TigerProgram {
+    
+    // Function g only needs the static link to F's frame
+    static int g(FrameF static_link) {
+        return static_link.z + static_link.static_link.x;
+    }
+    
+    // Function f gets its parent's static link
+    static int f(FrameMain parent_link, int y) {
+        // Construct own frame and link to parent
+        FrameF my_frame = new FrameF();
+        my_frame.static_link = parent_link;
+        my_frame.y = y;
+        my_frame.z = my_frame.static_link.x + my_frame.y;
+        
+        return g(my_frame);
+    }
+    
+    static void main() {
+        FrameMain top_frame = new FrameMain();
+        top_frame.x = 5;
+        f(top_frame, 10);
+    }
+}
+```
