@@ -15,6 +15,9 @@ const T* Lookup(const std::unordered_map<K, const T*>& map, K key) {
 }
 
 struct Scope {
+  Scope() = default;
+  explicit Scope(const Scope* p) : parent(p) {}
+
   const Scope* parent = nullptr;
   std::unordered_map<std::string_view, const FunctionDeclaration*> function;
   std::unordered_map<std::string_view, StorageLocation> storage;
