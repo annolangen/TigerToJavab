@@ -15,7 +15,7 @@ const T* Lookup(const std::unordered_map<K, const T*>& map, K key) {
 }
 
 struct Scope {
-  const Scope* parent;
+  const Scope* parent = nullptr;
   std::unordered_map<std::string_view, const FunctionDeclaration*> function;
   std::unordered_map<std::string_view, StorageLocation> storage;
   std::unordered_map<std::string_view, const TypeDeclaration*> type;
@@ -25,13 +25,13 @@ struct Scope {
 // scope. Each lookup member function consists of seaching each scope in the
 // parent chain for the symbol.
 class St : public SymbolTable {
- public:
+public:
   St(std::vector<std::unique_ptr<Scope>>&& scopes,
      std::unordered_map<const Expr*, const Scope*>&& scope_by_expr)
       : scopes_(std::move(scopes)), scope_by_expr_(std::move(scope_by_expr)) {}
 
-  const FunctionDeclaration* lookupFunction(
-      const Expr& expr, std::string_view name) const override {
+  const FunctionDeclaration*
+  lookupFunction(const Expr& expr, std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
       if (const auto* d = Lookup(s->function, name); d) return d;
     }
@@ -48,13 +48,12 @@ class St : public SymbolTable {
     return nullptr;
   }
 
-  const VariableDeclaration* lookupVariable(
-      const Expr& expr, std::string_view name) const override {
+  const VariableDeclaration*
+  lookupVariable(const Expr& expr, std::string_view name) const override {
     StorageLocation d = lookupStorageLocation(expr, name);
     if (auto v = std::get_if<const VariableDeclaration*>(&d); v) return *v;
     return nullptr;
   }
-
 
   const TypeDeclaration* lookupType(const Expr& expr,
                                     std::string_view name) const override {
@@ -64,8 +63,8 @@ class St : public SymbolTable {
     return nullptr;
   }
 
-  const TypeDeclaration* lookupUnaliasedType(
-      const Expr& expr, std::string_view name) const override {
+  const TypeDeclaration*
+  lookupUnaliasedType(const Expr& expr, std::string_view name) const override {
     const TypeDeclaration* decl = lookupType(expr, name);
     while (decl) {
       const auto* alias = std::get_if<Identifier>(&decl->value);
@@ -82,7 +81,7 @@ class St : public SymbolTable {
     return out.str();
   }
 
- private:
+private:
   std::vector<std::unique_ptr<Scope>> scopes_;
   std::unordered_map<const Expr*, const Scope*> scope_by_expr_;
 };
@@ -91,8 +90,7 @@ class St : public SymbolTable {
 // Let create a new Scope. The `Build` function transfers ownership of the
 // Scopes and the map of Expr to Scope to the returned SymbolTable.
 struct StBuilder {
-  template <class T>
-  bool operator()(const T& v) {
+  template <class T> bool operator()(const T& v) {
     return VisitChildren(v, *this);
   }
 
@@ -106,7 +104,7 @@ struct StBuilder {
   bool operator()(const FunctionDeclaration& v) {
     current->function[v.id] = &v;
     Scope* prev = current;
-    scopes.emplace_back(std::make_unique<Scope>(Scope{.parent = current}));
+    scopes.emplace_back(std::make_unique<Scope>(current));
     current = scopes.back().get();
     for (const TypeField& p : v.parameter) {
       current->storage[p.id] = &p;
@@ -128,7 +126,7 @@ struct StBuilder {
 
   bool operator()(const Let& v) {
     Scope* prev = current;
-    scopes.emplace_back(std::make_unique<Scope>(Scope{.parent = current}));
+    scopes.emplace_back(std::make_unique<Scope>(current));
     current = scopes.back().get();
     // First pass: add all declarations to the new scope.
     for (const auto& decl : v.declaration) {
@@ -151,7 +149,7 @@ struct StBuilder {
 
   bool operator()(const For& v) {
     Scope* prev = current;
-    scopes.emplace_back(std::make_unique<Scope>(Scope{.parent = current}));
+    scopes.emplace_back(std::make_unique<Scope>(current));
     current = scopes.back().get();
     current->storage[v.id] = &v;
     if (!VisitChildren(v, *this)) return false;
@@ -164,10 +162,9 @@ struct StBuilder {
   std::vector<std::unique_ptr<Scope>> scopes;
   std::unordered_map<const Expr*, const Scope*> scope_by_expr;
   Scope* current =
-      (scopes.emplace_back(std::make_unique<Scope>(Scope{.parent = nullptr})),
-       scopes[0].get());
+      (scopes.emplace_back(std::make_unique<Scope>()), scopes[0].get());
 };
-}  // namespace
+} // namespace
 
 std::unique_ptr<SymbolTable> SymbolTable::Build(const Expr& root) {
   StBuilder builder;

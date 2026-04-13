@@ -33,15 +33,20 @@ std::unique_ptr<syntax::Expr> ParseFile(const std::string& file_name,
   return std::move(driver.result);
 }
 
+struct PipeDeleter {
+  void operator()(FILE* f) const {
+    if (f) pclose(f);
+  }
+};
+
 std::string RunJava() {
   std::string result;
   // Command that works on Cygwin and Linux by avoiding path separator in the
   // Java classpath.
-  const char* cmd =
-      "test -f /tmp/Std.class || cp -f ../../src/Std.class /tmp;"
-      "cd /tmp; cp Main.class $(date +%N).class; java Main";
+  const char* cmd = "test -f /tmp/Std.class || cp -f ../../src/Std.class /tmp;"
+                    "cd /tmp; cp Main.class $(date +%N).class; java Main";
   std::array<char, 128> buffer;
-  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+  std::unique_ptr<FILE, PipeDeleter> pipe(popen(cmd, "r"));
   if (pipe) {
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
       result += buffer.data();
@@ -49,4 +54,4 @@ std::string RunJava() {
   }
   return result;
 }
-}  // namespace testing
+} // namespace testing

@@ -1,5 +1,6 @@
 
 #include "type_finder.h"
+#include <algorithm>
 
 namespace {
 using namespace syntax;
@@ -10,7 +11,7 @@ std::string operator+(std::string&& s, std::string_view v) {
   return std::move(s);
 }
 
-}  // namespace
+} // namespace
 
 std::string_view TypeFinder::operator()(const Expr& id) {
   if (auto i = cache_.find(&id); i != cache_.end()) {
@@ -80,9 +81,7 @@ std::string_view TypeFinder::GetLValueType(const Expr& parent,
                     [&](const TypeField* tf) -> std::string_view {
                       return tf->type_id;
                     },
-                    [&](const For*) -> std::string_view {
-                      return "int";
-                    },
+                    [&](const For*) -> std::string_view { return "int"; },
                     [&](std::nullptr_t) -> std::string_view {
                       errors_.emplace_back("Variable not found: " + name);
                       return "NOTYPE";

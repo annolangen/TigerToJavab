@@ -85,7 +85,7 @@ struct CodeAttribute : AttributeInfo {
     Put2(os, max_locals);
     Put4(os, code_bytes.length());
     os.write(code_bytes.data(), code_bytes.length());
-    Put2(os, 0);  // exception table length
+    Put2(os, 0); // exception table length
     Put2(os, attributes.size());
     for (const auto& a : attributes) a->Emit(os);
     return os.str();
@@ -172,7 +172,7 @@ struct MethodRefConstant : Ref, public Invocable {
   Tag tag() const override { return kMethodref; }
   std::optional<MethodRefConstant*> methodRef() override { return this; }
   void Invoke(std::ostream& os) const override {
-    os.put(Instruction::_invokestatic);
+    os.put(char(Instruction::_invokestatic));
     Put2(os, index);
   }
 };
@@ -313,9 +313,9 @@ struct JvmProgram : Program {
   void DefineConstructor() {
     std::ostringstream os;
     os.put(Instruction::_aload_0);
-    os.put(Instruction::_invokespecial);
+    os.put(char(Instruction::_invokespecial));
     Put2(os, methodRefConstant("java/lang/Object", "<init>", "()V").index);
-    os.put(Instruction::_return);
+    os.put(char(Instruction::_return));
     DefineFunction(0, "<init>", "()V", os.str());
   }
 
@@ -325,22 +325,21 @@ struct JvmProgram : Program {
     u2 super_class = classConstant("java/lang/Object").index;
 
     Put4(os, 0xcafebabe);
-    Put2(os, 0);   // minor version
-    Put2(os, 50);  // major version
+    Put2(os, 0);  // minor version
+    Put2(os, 50); // major version
     Put2(os, static_cast<u2>(constant_pool.size() + 1));
     for (const auto& c : constant_pool) c->Emit(os);
-    Put2(os, 0x20);  // flags
+    Put2(os, 0x20); // flags
     Put2(os, this_class);
     Put2(os, super_class);
-    Put2(os, 0);  // interfaces count
-    Put2(os, 0);  // field count
+    Put2(os, 0); // interfaces count
+    Put2(os, 0); // field count
     Put2(os, static_cast<u2>(methods.size()));
     for (const auto& m : methods) m.Emit(os);
-    Put2(os, 0);  // attributes count
+    Put2(os, 0); // attributes count
   }
 
-  template <class T>
-  T& Adopt(std::unique_ptr<T> t) {
+  template <class T> T& Adopt(std::unique_ptr<T> t) {
     t->index = 1 + constant_pool.size();
     T* raw_ptr = t.get();
     constant_pool.emplace_back(std::move(t));
@@ -435,10 +434,10 @@ struct JvmProgram : Program {
   std::vector<std::unique_ptr<Constant>> constant_pool;
   std::vector<MethodInfo> methods;
 };
-}  // namespace
+} // namespace
 
 std::unique_ptr<Program> Program::JavaProgram() {
   return std::make_unique<JvmProgram>();
 }
 
-}  // namespace emit
+} // namespace emit

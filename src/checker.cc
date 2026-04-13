@@ -1,5 +1,6 @@
 #include "checker.h"
 
+#include <algorithm>
 #include <functional>
 #include <iostream>
 #include <sstream>
