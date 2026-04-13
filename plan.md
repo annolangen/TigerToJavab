@@ -49,15 +49,15 @@ _Goal: Type-check the program and build a symbol table._
   - [x] Check binary operator type constraints (`<`, `>`, `&`, `|`). (`test_op_type_mismatch`)
   - [x] Check that `if`/`while` conditions are integers. (`test_if_cond_type_mismatch`, `test_while_cond_type_mismatch`)
   - [x] **Check type matching for variable declarations and assignments.** (`test_var_decl_type_mismatch`, `test_assign_type_mismatch`)
-  - [ ] **Check function calls:** Verify argument count and types match the function signature.
-  - [ ] **Check `if-then-else`:** Ensure `then` and `else` branches have compatible types.
-  - [ ] **Check loop constraints:**
-    - [ ] Loop body must not produce a value.
-    - [ ] `for` loop variable is read-only.
-    - [ ] `break` is only used inside a loop.
+  - [x] **Check function calls:** Verify argument count and types match the function signature.
+  - [x] **Check `if-then-else`:** Ensure `then` and `else` branches have compatible types.
+  - [x] **Check loop constraints:**
+    - [x] Loop body must not produce a value.
+    - [x] `for` loop variable is read-only.
+    - [x] `break` is only used inside a loop.
   - [x] **Check `nil` usage:** `nil` is only assignable to record types. (`test_nil_assign_to_int`)
-  - [ ] **Check for duplicate definitions** in the same scope.
-  - [ ] **Check for illegal recursive type declarations** (cycles not involving a record/array).
+  - [x] **Check for duplicate definitions** in the same scope.
+  - [x] **Check for illegal recursive type declarations** (cycles not involving a record/array).
 
 ## Milestone 3: Java Bytecode Generation
 

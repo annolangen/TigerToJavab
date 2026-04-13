@@ -212,6 +212,55 @@ struct NilChecker : Checker {
   }
 };
 
+// Function calls must have the same number of arguments as parameters,
+// and argument types must match parameter types.
+struct FunctionCallChecker : Checker {
+  FunctionCallChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
+      : Checker{errors, symbols, tf} {}
+
+  void operator()(const auto&) {}
+  void operator()(const Expr& e) {
+    const FunctionCall* fc = std::get_if<FunctionCall>(&e);
+    if (!fc) return;
+
+    const FunctionDeclaration* fd = symbols.lookupFunction(e, fc->id);
+    if (!fd) return;
+
+    if (fc->arguments.size() != fd->parameter.size()) {
+      emit() << "Function " << fc->id << " expects " << fd->parameter.size()
+             << " arguments, but got " << fc->arguments.size();
+      return;
+    }
+
+    for (size_t i = 0; i < fc->arguments.size(); ++i) {
+      bool is_nil = std::holds_alternative<Nil>(*fc->arguments[i]);
+      std::string_view arg_type = is_nil ? "nil" : get_type(*fc->arguments[i]);
+      std::string_view declared_type = fd->parameter[i].type_id;
+      std::string_view expected_type = declared_type;
+
+      const TypeDeclaration* td = symbols.lookupType(e, expected_type);
+      while(td) {
+        if (const auto* alias = std::get_if<Identifier>(&td->value)) {
+          expected_type = *alias;
+          td = symbols.lookupType(e, expected_type);
+        } else {
+          break;
+        }
+      }
+
+      if (arg_type != expected_type && arg_type != "NOTYPE" && arg_type != "nil") {
+        emit() << "Argument " << i + 1 << " of function " << fc->id
+               << " expects type " << declared_type << " but got " << arg_type;
+      } else if (arg_type == "nil") {
+        const TypeDeclaration* decl = symbols.lookupUnaliasedType(e, declared_type);
+        if (!decl || !std::get_if<TypeFields>(&decl->value)) {
+          emit() << "Type " << declared_type << " is not a record type";
+        }
+      }
+    }
+  }
+};
+
 // - Mutually recursive type declrations must pass through a record or
 //   array type (3.1)
 // - No two defined types in such a sequence may have the same name (3.1)
@@ -466,7 +515,7 @@ struct StructureChecker {
 Errors ListErrors(const Expr& root, const SymbolTable& t, TypeFinder& tf) {
   Errors errors;
   CheckBelow<DeclarationChecker, RecordFieldChecker, BinaryOpChecker,
-             ConditionalChecker, NilChecker>(root, errors, t, tf);
+             ConditionalChecker, NilChecker, FunctionCallChecker>(root, errors, t, tf);
   StructureChecker(errors, t, tf).Check(root);
   return errors;
 }

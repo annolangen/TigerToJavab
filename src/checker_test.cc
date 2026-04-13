@@ -282,6 +282,37 @@ end)");
       REQUIRE(errors[0] == "Variable x initialized with no value");
     }
   }
+
+  GIVEN("Function call checks") {
+    WHEN("Valid function call") {
+      auto errors = Check("let function f(a:int, b:string):int = a in f(5, \"hello\") end");
+      REQUIRE(errors.empty());
+    }
+    WHEN("Argument count mismatch") {
+      auto errors = Check("let function f(a:int):int = a in f(5, 6) end");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Function f expects 1 arguments, but got 2");
+    }
+    WHEN("Argument type mismatch") {
+      auto errors = Check("let function f(a:int):int = a in f(\"hello\") end");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Argument 1 of function f expects type int but got string");
+    }
+    WHEN("Argument type alias") {
+      auto errors = Check("let type myint = int function f(a:myint):int = 5 var x := 5 in f(x) end");
+      REQUIRE(errors.empty());
+    }
+    WHEN("Argument nil for record") {
+      auto errors = Check("let type r = {x:int} function f(a:r):int = 0 in f(nil) end");
+      REQUIRE(errors.empty());
+    }
+    WHEN("Argument nil for int") {
+      auto errors = Check("let function f(a:int):int = a in f(nil) end");
+      REQUIRE(errors.size() == 1);
+      // It errors on Type int is not a record type
+      REQUIRE(errors[0] == "Type int is not a record type");
+    }
+  }
 }
 
 }  // namespace
