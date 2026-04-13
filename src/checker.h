@@ -19,7 +19,7 @@
 // - Loop body must not return a value (2.8)
 // - For loop variable may not be assigned to (2.8)
 // - Break expression is illegal outside loop bodies
-// - Mutually recursive type declrations must pass through a record or
+// - Mutually recursive type declarations must pass through a record or
 //   array type (3.1)
 // - The scope of the type declaration begins at the start of the
 //   sequence of type declarations (3.1) [Types may be referenced

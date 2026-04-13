@@ -43,7 +43,7 @@ _Goal: Type-check the program and build a symbol table._
   - Implement a `SymbolTable` class that can manage scopes. It should map identifiers (strings) to their definitions (variable type, function signature, etc.).
   - The table must support entering and exiting scopes to handle nested functions and `let` expressions.
 
-- [ ] **Task 2.2: Implement Semantic Checker (Visitor)**
+- [x] **Task 2.2: Implement Semantic Checker (Visitor)**
   - [x] Create a visitor that traverses the AST (`checker.cc`).
   - [x] Check record literal field names and types. (`test_record_lit_field_type_mismatch`)
   - [x] Check binary operator type constraints (`<`, `>`, `&`, `|`). (`test_op_type_mismatch`)
