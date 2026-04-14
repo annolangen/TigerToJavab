@@ -60,32 +60,30 @@ in f(10) end
 
 **JVM Equivalent (Java Source Approximation):**
 ```java
-// Frame structures emitted as plain data classes in JVM
-class FrameMain { int x; }
-class FrameF { FrameMain static_link; int y; int z; }
+// Scope structures emitted as plain data classes in JVM
+class Scope0 { int x; }
+class Scope1 { Scope0 _parent; int z; }
 
 class TigerProgram {
     
     // Function g only needs the static link to F's frame
-    static int g(FrameF static_link) {
-        return static_link.z + static_link.static_link.x;
+    static int g(Scope1 _scope) {
+        return _scope.z + _scope._parent.x;
     }
     
     // Function f gets its parent's static link
-    static int f(FrameMain parent_link, int y) {
+    static int f(Scope0 _scope, int y) {
         // Construct own frame and link to parent
-        FrameF my_frame = new FrameF();
-        my_frame.static_link = parent_link;
-        my_frame.y = y;
-        my_frame.z = my_frame.static_link.x + my_frame.y;
-        
-        return g(my_frame);
+        Scope1 _scope1 = new Scope1();
+        _scope1._parent = _scope;
+        _scope1.z = _scope.x + y;
+        return g(_scope1);
     }
     
     static void main() {
-        FrameMain top_frame = new FrameMain();
-        top_frame.x = 5;
-        f(top_frame, 10);
+        Scope0 _scope0 = new Scope0();
+        _scope0.x = 5;
+        f(_scope0, 10);
     }
 }
 ```

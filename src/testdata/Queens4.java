@@ -2,17 +2,23 @@ import java.util.Arrays;
 
 class Scope0 {
 
-  static int[] MakeIntArray(int n, int v) {
-    int[] result = new int[n];
-    Arrays.fill(result, v);
-    return result;
-  }
+  public int N;
+  public int[] row;
+  public int[] col;
+  public int[] diag1;
+  public int[] diag2;
 
-  public int N = 8;
-  public int[] row = MakeIntArray(N, 0);
-  public int[] col = MakeIntArray(N, 0);
-  public int[] diag1 = MakeIntArray(N + N - 1, 0);
-  public int[] diag2 = MakeIntArray(N + N - 1, 0);
+  Scope() {
+    N = 8;
+    row = new int[N];
+    Arrays.fill(row, 0);
+    col = new int[N];
+    Arrays.fill(col, 0);
+    diag1 = new int[N + N - 1];
+    Arrays.fill(diag1, 0);
+    diag2 = new int[N + N - 1];
+    Arrays.fill(diag2, 0);
+  }
 }
 
 class Queens4 {
