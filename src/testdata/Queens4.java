@@ -8,7 +8,7 @@ class Scope0 {
   public int[] diag1;
   public int[] diag2;
 
-  Scope() {
+  Scope0() {
     N = 8;
     row = new int[N];
     Arrays.fill(row, 0);
