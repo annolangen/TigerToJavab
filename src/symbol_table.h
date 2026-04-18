@@ -9,42 +9,60 @@
 // function parameter, or nullptr to indicate not found.
 // NOTE: For loop variables are returned as `const syntax::For*`.
 // These are implicit Read-Only variables within the loop scope.
-using StorageLocation = std::variant<const syntax::VariableDeclaration*,
-                                     const syntax::TypeField*, const syntax::For*,
-                                     std::nullptr_t>;
+using StorageLocation =
+    std::variant<const syntax::VariableDeclaration*, const syntax::TypeField*,
+                 const syntax::For*, std::nullptr_t>;
+
+// Map of symbols to declarations. Scopes correspond to for-loopss and bodies of
+// functions and let.
+struct Scope {
+  Scope() = default;
+  explicit Scope(const Scope* p) : parent(p) {}
+
+  const Scope* parent = nullptr;
+  std::unordered_map<std::string_view, const syntax::FunctionDeclaration*>
+      function;
+  std::unordered_map<std::string_view, StorageLocation> storage;
+  std::unordered_map<std::string_view, const syntax::TypeDeclaration*> type;
+};
 
 // Table to look up symbols in the AST starting from a given expression. Returns
 // null if not found.
 class SymbolTable {
- public:
+public:
   static std::unique_ptr<SymbolTable> Build(const syntax::Expr& root);
   virtual ~SymbolTable() = default;
 
   // Returns function declarations with given name visible in given expression.
-  virtual const syntax::FunctionDeclaration* lookupFunction(
-      const syntax::Expr& expr, std::string_view name) const = 0;
+  virtual const syntax::FunctionDeclaration*
+  lookupFunction(const syntax::Expr& expr, std::string_view name) const = 0;
 
   // Returns variable declarations with given name visible in given expression.
-  virtual const syntax::VariableDeclaration* lookupVariable(
-      const syntax::Expr& expr, std::string_view name) const = 0;
+  virtual const syntax::VariableDeclaration*
+  lookupVariable(const syntax::Expr& expr, std::string_view name) const = 0;
 
   // Returns type declarations with given name visible in given expression.
   // NOTE: This returns the direct definition of the type. If the type is an
   // alias (e.g. type a = b), this returns the TypeDeclaration for 'a' which
   // contains an Identifier 'b'. To get the underlying structural type, use
   // lookupUnaliasedType or manually unwind aliases.
-  virtual const syntax::TypeDeclaration* lookupType(
-      const syntax::Expr& expr, std::string_view name) const = 0;
+  virtual const syntax::TypeDeclaration*
+  lookupType(const syntax::Expr& expr, std::string_view name) const = 0;
 
   // Returns type declaration with given name visible in given expression,
   // traversing any type aliases.
   // NOTE: This unwinds aliases until a Record, Array, or Builtin type is found.
   // Use this when checking structural constraints (e.g. "is this a record?").
-  virtual const syntax::TypeDeclaration* lookupUnaliasedType(
-      const syntax::Expr& expr, std::string_view name) const = 0;
+  virtual const syntax::TypeDeclaration*
+  lookupUnaliasedType(const syntax::Expr& expr,
+                      std::string_view name) const = 0;
 
-  virtual StorageLocation lookupStorageLocation(
-      const syntax::Expr& expr, std::string_view name) const = 0;
+  virtual StorageLocation
+  lookupStorageLocation(const syntax::Expr& expr,
+                        std::string_view name) const = 0;
+
+  // Returns all scopes encountered thus far.
+  virtual const std::vector<std::unique_ptr<Scope>>& scopes() const = 0;
 
   // Returns string for debugging.
   virtual std::string toString() const = 0;

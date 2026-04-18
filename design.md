@@ -48,6 +48,7 @@ Translating Tiger's lexically nested closures to the JVM requires handling mutab
 The compiler achieves this by emitting "Frame" (or Scope) classes. Every Tiger function compiles exactly into a flat `static` method in the `Main` class. When a function declares nested functions that capture variables, it instantiates a Frame object representing its Activation Record. A "Static Link" (pointer to the parent's Frame) is passed as a hidden first argument to all functions to safely maintain the lexical scope chain across the JVM.
 
 **Tiger Source Example:**
+
 ```tiger
 let
   var x := 5
@@ -59,27 +60,32 @@ in f(10) end
 ```
 
 **JVM Equivalent (Java Source Approximation):**
+
 ```java
 // Scope structures emitted as plain data classes in JVM
 class Scope0 { int x; }
-class Scope1 { Scope0 _parent; int z; }
+class Scope1 { Scope0 _parent; int y; }
+class Scope2 { Scope1 _parent; int z;}
 
 class TigerProgram {
-    
+
     // Function g only needs the static link to F's frame
-    static int g(Scope1 _scope) {
-        return _scope.z + _scope._parent.x;
+    static int g(Scope2 _scope) {
+        return _scope.parent.z + _scope._parent.parent.x;
     }
-    
+
     // Function f gets its parent's static link
     static int f(Scope0 _scope, int y) {
         // Construct own frame and link to parent
         Scope1 _scope1 = new Scope1();
         _scope1._parent = _scope;
-        _scope1.z = _scope.x + y;
-        return g(_scope1);
+        _scope1.y = y;
+        Scope2 _scope2 = new Scope2();
+        _scope2._parent = _scope1;
+        _scope2.z = _scope1._parent.x + y;
+        return g(_scope2);
     }
-    
+
     static void main() {
         Scope0 _scope0 = new Scope0();
         _scope0.x = 5;

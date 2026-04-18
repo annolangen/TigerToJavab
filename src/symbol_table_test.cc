@@ -96,4 +96,4 @@ end)");
     REQUIRE(f_lookup_from_g->id == "f");
   }
 }
-}  // namespace
+} // namespace
