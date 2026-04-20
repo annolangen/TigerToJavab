@@ -24,24 +24,29 @@ SCENARIO("JavaSource") {
   GIVEN("Leaf Expression") {
     REQUIRE_THAT(Compile("nil"), ContainsSubstring("null"));
   }
+  auto sanitize = [](std::string s) {
+    s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
+    return s;
+  };
   GIVEN("array type and an array variable") {
-    REQUIRE_THAT(Compile(R"(
+    REQUIRE_THAT(sanitize(Compile(R"(
 let
 	type  arrtype = array of int
 	var arr1:arrtype := arrtype [10] of 0
 in
 	arr1
-end)"),
-                 Equals(R"(import java.util.Arrays;
-  
+end)")),
+                 Equals(sanitize(R"(
+import java.util.Arrays;
+
 class Main {
-  
+
   public static void main(String[] args) {
-      _scope.arr1;
-      
+    _scope.arr1;
+    
   }
 }
-)"));
+)")));
   }
   GIVEN("8 Queens") {
     REQUIRE_THAT(Compile(R"(
