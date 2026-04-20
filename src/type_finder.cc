@@ -1,5 +1,6 @@
 
 #include "type_finder.h"
+
 #include <algorithm>
 
 namespace {

@@ -73,4 +73,4 @@ in
 end)"));
   }
 }
-}  // namespace
+} // namespace

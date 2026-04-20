@@ -10,7 +10,6 @@
 #include "debug_string.h"
 
 namespace java {
-namespace {
 
 std::string Sanitize(std::string id) {
   static std::unordered_set<std::string_view> kJavaKeywords = {
@@ -28,15 +27,14 @@ std::string Sanitize(std::string id) {
   return kJavaKeywords.count(id) ? "_" + id : id;
 }
 
-struct Compiler;
-
-struct JavaFunction {
-  const syntax::FunctionDeclaration* decl;
-  std::vector<syntax::VariableDeclaration*> outer_scope;
-
-  std::ostream& AppendDefinition(std::ostream& os, TypeFinder& types,
-                                 Compiler& compiler);
-};
+bool IsClassScope(const Scope* s) {
+  if (!s) return false;
+  for (const auto& kv : s->storage) {
+    if (std::holds_alternative<const syntax::VariableDeclaration*>(kv.second))
+      return true;
+  }
+  return false;
+}
 
 struct JavaType {
   const SymbolTable& symbols;
@@ -53,7 +51,6 @@ struct JavaType {
   }
   std::string operator()(const syntax::TypeFields& fields) {
     std::ostringstream out;
-    // TODO: Need class name. maybe from outer alias.
     out << "class {\n";
     for (const auto& field : fields) {
       out << "  " << (*this)(field.type_id) << " " << field.id << ";\n";
@@ -69,12 +66,21 @@ struct JavaType {
 struct Compiler {
   const SymbolTable& symbols;
   TypeFinder& types;
-  std::ostringstream& out;
-  std::ostringstream& post_body;
-  // The current l-value being processed. Used for Array.fill() .
-  syntax::LValue* l_value = nullptr;
+  std::ostream& out;
+  std::ostream& post_body;
+  std::string current_lvalue;
 
-  void operator()(const syntax::Expr& expr) { std::visit(*this, expr); }
+  const syntax::FunctionDeclaration* current_function = nullptr;
+  const Scope* local_scope = nullptr;
+  const Scope* constructor_scope = nullptr;
+  const syntax::Expr* current_expr = nullptr;
+
+  void operator()(const syntax::Expr& expr) {
+    const syntax::Expr* old_expr = current_expr;
+    current_expr = &expr;
+    std::visit(*this, expr);
+    current_expr = old_expr;
+  }
   void operator()(const syntax::StringConstant& expr) {
     out << '"' << expr.value << '"';
   }
@@ -84,7 +90,19 @@ struct Compiler {
     (*this)(*expr);
   }
   void operator()(const syntax::LValue& expr) { std::visit(*this, expr); }
-  void operator()(const syntax::Identifier& expr) { out << expr; }
+  void operator()(const syntax::Identifier& expr) {
+    const Scope* def_scope =
+        current_expr ? symbols.getDefiningScope(*current_expr, expr) : nullptr;
+    if (constructor_scope && constructor_scope == def_scope) {
+      out << Sanitize(expr);
+      return;
+    }
+    if (IsClassScope(def_scope)) {
+      out << "_scope." << Sanitize(expr);
+    } else {
+      out << Sanitize(expr);
+    }
+  }
   void operator()(const syntax::RecordField& expr) {
     (*this)(*expr.l_value);
     out << "." << expr.id;
@@ -105,15 +123,41 @@ struct Compiler {
     (*this)(*expr.right);
   }
   void operator()(const syntax::Assignment& expr) {
-    (*this)(*expr.l_value);
-    l_value = expr.l_value.get();
+    std::ostringstream lval_out;
+    Compiler lval_compiler{
+        symbols,          types,       lval_out,         post_body, "",
+        current_function, local_scope, constructor_scope};
+    lval_compiler(*expr.l_value);
+    current_lvalue = lval_out.str();
+
+    out << current_lvalue;
     out << " = ";
     (*this)(*expr.expr);
-    l_value = nullptr;
+    current_lvalue = "";
   }
   void operator()(const syntax::FunctionCall& expr) {
-    out << Sanitize(expr.id) << ".run(";
+    const syntax::FunctionDeclaration* fn =
+        current_expr ? symbols.lookupFunction(*current_expr, expr.id) : nullptr;
+    if (fn) out << "fn";
+    std::string printFn = Sanitize(expr.id);
+    if (printFn == "print") printFn = "System.out.print";
+    out << printFn << "(";
     const char* sep = "";
+
+    // standard library functions don't have scopes
+    if (fn) {
+      const Scope* fn_scope = fn->body ? symbols.getScope(*fn->body) : nullptr;
+      const Scope* req_scope = fn_scope ? fn_scope->parent : nullptr;
+      if (IsClassScope(req_scope)) {
+        if (!current_function) {
+          out << "new Scope" << req_scope->id << "()";
+        } else {
+          out << "_scope";
+        }
+        sep = ", ";
+      }
+    }
+
     for (auto& arg : expr.arguments) {
       out << sep;
       (*this)(*arg);
@@ -129,12 +173,12 @@ struct Compiler {
     out << "new " << java_type(types(*expr.value)) << "[";
     (*this)(*expr.size);
     out << "];\n";
-    if (l_value == nullptr) {
+    if (current_lvalue.empty()) {
       std::cerr << "l_value is null\n";
       return;
     }
-    out << "Arrays.fill(";
-    (*this)(*l_value);
+    out << "    Arrays.fill(";
+    out << current_lvalue;
     out << ", ";
     (*this)(*expr.value);
     out << ")";
@@ -142,53 +186,73 @@ struct Compiler {
   void operator()(const syntax::IfThen& expr) {
     out << "if (";
     (*this)(*expr.condition);
-    out << ") {\n";
+    out << ") {\n      ";
     (*this)(*expr.then_expr);
-    out << "\n}";
+    out << ";\n    }";
   }
   void operator()(const syntax::IfThenElse& expr) {
-    out << "if (";
-    (*this)(*expr.condition);
-    out << ") {\n";
-    (*this)(*expr.then_expr);
-    out << "\n} else {\n";
-    (*this)(*expr.else_expr);
-    out << "\n}";
+    std::string_view type = types(*expr.then_expr);
+    if (type.empty() || type == "void" || type == "Object") {
+      out << "if (";
+      (*this)(*expr.condition);
+      out << ") {\n      ";
+      (*this)(*expr.then_expr);
+      out << ";\n    } else {\n      ";
+      (*this)(*expr.else_expr);
+      out << ";\n    }";
+    } else {
+      (*this)(*expr.condition);
+      out << " ? ";
+      (*this)(*expr.then_expr);
+      out << " : ";
+      (*this)(*expr.else_expr);
+    }
   }
   void operator()(const syntax::While& expr) {
     out << "while (";
     (*this)(*expr.condition);
     out << ") {\n";
     (*this)(*expr.body);
-    out << "\n}";
+    out << ";\n}";
   }
   void operator()(const syntax::For& expr) {
     out << "for (int " << expr.id << " = ";
     (*this)(*expr.start);
-    out << "; " << expr.id << " < ";
+    out << "; " << expr.id << " <= ";
     (*this)(*expr.end);
-    out << "; " << expr.id << "++) {\n";
+    out << "; " << expr.id << "++) {\n      ";
     (*this)(*expr.body);
-    out << "\n}";
+    out << ";\n    }";
   }
   void operator()(const syntax::Break&) { out << "break"; }
   void operator()(const syntax::FunctionDeclaration& expr) {
-    JavaFunction f{&expr, {}};
-    f.AppendDefinition(out, types, *this);
-  }
-  void operator()(const syntax::VariableDeclaration& decl) {
-    if (decl.value) {
-      JavaType java_type = {symbols, *decl.value};
-      out << java_type(types(decl)) << " " << decl.id;
-      out << " = ";
-      syntax::LValue id = decl.id;
-      auto* old_lvalue = l_value;
-      l_value = &id;
-      (*this)(*decl.value);
-      l_value = old_lvalue;
+    const Scope* fn_scope = expr.body ? symbols.getScope(*expr.body) : nullptr;
+    const Scope* req_scope = fn_scope ? fn_scope->parent : nullptr;
+
+    std::ostringstream fn_out;
+    fn_out << "\n  static " << expr.type_id.value_or("void") << " "
+           << Sanitize(expr.id) << "(";
+    const char* sep = "";
+    if (IsClassScope(req_scope)) {
+      fn_out << "Scope" << req_scope->id << " _scope";
+      sep = ", ";
     }
-    out << ";\n";
+    for (const auto& arg : expr.parameter) {
+      fn_out << sep << "int" /* TODO types(arg) */ << " " << Sanitize(arg.id);
+      sep = ", ";
+    }
+    fn_out << ") {\n    ";
+    Compiler sub_compiler{symbols, types,   fn_out,  post_body, "",
+                          &expr,   nullptr, nullptr, nullptr};
+    // if body is let, it prints statements
+    sub_compiler(*expr.body);
+    // Don't add a concluding semicolon if it's a Let body or IfThen block that
+    // already does it Wait, let's just not add semicolon because it might break
+    // block parsing.
+    fn_out << "\n  }\n";
+    post_body << fn_out.str();
   }
+  void operator()(const syntax::VariableDeclaration&) {}
   void operator()(const syntax::TypeDeclaration&) {}
   void operator()(const syntax::ArrayType&) { out << "TODO ArrayType"; }
   void operator()(const syntax::TypeFields& expr) {
@@ -197,56 +261,51 @@ struct Compiler {
     }
   }
   void operator()(const syntax::Let& expr) {
-    for (auto& decl : expr.declaration) {
-      std::visit(*this, *decl);
+    for (const auto& decl : expr.declaration) {
+      if (auto fn = std::get_if<syntax::FunctionDeclaration>(decl.get())) {
+        (*this)(*fn);
+      }
     }
-    for (auto& stmt : expr.body) {
+    const char* sep = "";
+    for (const auto& stmt : expr.body) {
+      out << sep;
       (*this)(*stmt);
-      out << ";\n";
+      if (std::holds_alternative<syntax::IfThen>(*stmt) ||
+          std::holds_alternative<syntax::IfThenElse>(*stmt)) {
+        // blocks don't need semicolons
+      } else {
+        out << ";\n    ";
+      }
     }
   }
   void operator()(const syntax::Parenthesized& expr) {
-    const char* sep = "\n";
+    const char* sep = "";
     for (auto& e : expr.exprs) {
       out << sep;
       (*this)(*e);
-      sep = ";\n";
+      sep = ";\n      ";
     }
   }
 };
 
-std::ostream& JavaFunction::AppendDefinition(std::ostream& os,
-                                             TypeFinder& types,
-                                             Compiler& compiler) {
-  os << "  static " << decl->type_id.value_or("void") << " " << decl->id << "(";
-  const char* sep = "";
-  for (const auto& arg : decl->parameter) {
-    os << sep << arg.type_id << " " << arg.id;
-    sep = ", ";
-  }
-  for (const auto* arg : outer_scope) {
-    os << sep << types(*arg) << " " << arg->id;
-    sep = ", ";
-  }
-  os << ") {\n";
-  compiler(*decl->body);
-  return os << "\n  }\n";
-}
-}  // namespace
-
 std::string Compile(const syntax::Expr& expr, const SymbolTable& t,
                     TypeFinder& tf, std::string_view class_name) {
+  std::ostringstream head;
   std::ostringstream body;
   std::ostringstream post_body;
-  body << "import java.utils.Arrays;"
-       << "\n\n";
-  body << "class " << class_name << " {\n\n";
-  body << "  public static void main(String[] args) {\n";
-  post_body << "}\n}\n";
 
-  Compiler compile{t, tf, body, post_body};
+  head << "import java.util.Arrays;\n\n";
+
+  body << "class " << class_name << " {\n\n";
+  body << "  public static void main(String[] args) {\n    ";
+
+  Compiler compile{t,       tf,      body,    post_body, "",
+                   nullptr, nullptr, nullptr, nullptr};
   compile(expr);
 
-  return body.str() + post_body.str();
+  body << "\n  }\n";
+
+  return head.str() + body.str() + post_body.str() + "}\n";
 }
-}  // namespace java
+
+} // namespace java

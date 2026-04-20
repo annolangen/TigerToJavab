@@ -16,9 +16,10 @@ using StorageLocation =
 // Map of symbols to declarations. Scopes correspond to for-loopss and bodies of
 // functions and let.
 struct Scope {
-  Scope() = default;
-  explicit Scope(const Scope* p) : parent(p) {}
+  Scope() : id(0) {}
+  explicit Scope(int id, const Scope* p) : id(id), parent(p) {}
 
+  int id;
   const Scope* parent = nullptr;
   std::unordered_map<std::string_view, const syntax::FunctionDeclaration*>
       function;
@@ -37,9 +38,19 @@ public:
   virtual const syntax::FunctionDeclaration*
   lookupFunction(const syntax::Expr& expr, std::string_view name) const = 0;
 
+  // Prevents implicit conversion for better error messages
+  template <typename T>
+  const syntax::FunctionDeclaration*
+  lookupFunction(const T&, std::string_view) const = delete;
+
   // Returns variable declarations with given name visible in given expression.
   virtual const syntax::VariableDeclaration*
   lookupVariable(const syntax::Expr& expr, std::string_view name) const = 0;
+
+  // Prevents implicit conversion for better error messages
+  template <typename T>
+  const syntax::VariableDeclaration*
+  lookupVariable(const T&, std::string_view) const = delete;
 
   // Returns type declarations with given name visible in given expression.
   // NOTE: This returns the direct definition of the type. If the type is an
@@ -49,6 +60,10 @@ public:
   virtual const syntax::TypeDeclaration*
   lookupType(const syntax::Expr& expr, std::string_view name) const = 0;
 
+  template <typename T>
+  const syntax::TypeDeclaration* lookupType(const T&,
+                                            std::string_view) const = delete;
+
   // Returns type declaration with given name visible in given expression,
   // traversing any type aliases.
   // NOTE: This unwinds aliases until a Record, Array, or Builtin type is found.
@@ -57,9 +72,30 @@ public:
   lookupUnaliasedType(const syntax::Expr& expr,
                       std::string_view name) const = 0;
 
+  template <typename T>
+  const syntax::TypeDeclaration*
+  lookupUnaliasedType(const T&, std::string_view) const = delete;
+
   virtual StorageLocation
   lookupStorageLocation(const syntax::Expr& expr,
                         std::string_view name) const = 0;
+
+  template <typename T>
+  StorageLocation lookupStorageLocation(const T&,
+                                        std::string_view) const = delete;
+
+  // Returns the immediate scope for a given expression.
+  virtual const Scope* getScope(const syntax::Expr& expr) const = 0;
+
+  template <typename T> const Scope* getScope(const T&) const = delete;
+
+  // Returns the scope where the given variable name is stored, starting from
+  // the given expression.
+  virtual const Scope* getDefiningScope(const syntax::Expr& expr,
+                                        std::string_view name) const = 0;
+
+  template <typename T>
+  const Scope* getDefiningScope(const T&, std::string_view) const = delete;
 
   // Returns all scopes encountered thus far.
   virtual const std::vector<std::unique_ptr<Scope>>& scopes() const = 0;

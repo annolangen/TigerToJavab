@@ -4,19 +4,17 @@
 
 namespace {
 
-template <class T>
-struct Str {
+template <class T> struct Str {
   const T& value;
   DebugStringOptions options;
 };
-template <class T>
-Str(const T&, DebugStringOptions) -> Str<T>;
+template <class T> Str(const T&, DebugStringOptions) -> Str<T>;
 template <class T>
 std::ostream& operator<<(std::ostream& out, const Str<T>& s) {
   return AppendDebugString(s.value, out, s.options);
 }
 
-}  // namespace
+} // namespace
 
 std::ostream& AppendDebugString(const syntax::Declaration& d, std::ostream& out,
                                 DebugStringOptions options) {

@@ -32,15 +32,14 @@ let
 in
 	arr1
 end)"),
-                 Equals(R"(import java.utils.Arrays;
-
+                 Equals(R"(import java.util.Arrays;
+  
 class Main {
-
+  
   public static void main(String[] args) {
-int[] arr1 = new int[10];
-Arrays.fill(arr1, 0);
-arr1;
-}
+      _scope.arr1;
+      
+  }
 }
 )"));
   }
@@ -69,58 +68,41 @@ let
              diag2[r+7-c] := 0)
 in try(0) end
 )"),
-                 Equals(R"(import java.utils.Arrays;
+                 Equals(R"(import java.util.Arrays;
 
 class Main {
 
   public static void main(String[] args) {
-int N = 8;
-int[] row = new int[N];
-Arrays.fill(row, 0);
-int[] col = new int[N];
-Arrays.fill(col, 0);
-int[] diag1 = new int[N + N - 1];
-Arrays.fill(diag1, 0);
-int[] diag2 = new int[N + N - 1];
-Arrays.fill(diag2, 0);
-  static void printboard() {
-
-for (int i = 0; i < N - 1; i++) {
-
-for (int j = 0; j < N - 1; j++) {
-print.run(if (col[i] = j) {
-" O"
-} else {
-" ."
-})
-};
-print.run("\n")
-};
-print.run("\n")
+    fn_try(new Scope1(), 0);
+    
   }
-  static void try(int c) {
-if (c = N) {
-printboard.run()
-} else {
-for (int r = 0; r < N - 1; r++) {
-if (row[r] = 0 & diag1[r + c] = 0 & diag2[r + 7 - c] = 0) {
 
-row[r] = 1;
-diag1[r + c] = 1;
-diag2[r + 7 - c] = 1;
-col[c] = r;
-_try.run(c + 1);
-row[r] = 0;
-diag1[r + c] = 0;
-diag2[r + 7 - c] = 0
-}
-}
-}
+  static void printboard(Scope1 _scope) {
+    for (int i = 0; i <= _scope.N - 1; i++) {
+      for (int j = 0; j <= _scope.N - 1; j++) {
+      System.out.print(_scope.col[i] = j ? " O" : " .");
+    };
+      System.out.print("\n");
+    };
+      System.out.print("\n")
   }
-_try.run(0);
-}
+
+  static void _try(Scope1 _scope, int c) {
+    c = _scope.N ? fnprintboard(_scope) : for (int r = 0; r <= _scope.N - 1; r++) {
+      if (_scope.row[r] = 0 & _scope.diag1[r + c] = 0 & _scope.diag2[r + 7 - c] = 0) {
+      row[r] = 1;
+      diag1[r + c] = 1;
+      diag2[r + 7 - c] = 1;
+      col[c] = r;
+      fn_try(_scope, c + 1);
+      row[r] = 0;
+      diag1[r + c] = 0;
+      diag2[r + 7 - c] = 0;
+    };
+    }
+  }
 }
 )"));
   }
 }
-}  // namespace
+} // namespace

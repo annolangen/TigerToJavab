@@ -16,8 +16,8 @@ SCENARIO("SymbolTable", "[SymbolTable]") {
     WHEN("empty") {
       REQUIRE(t->lookupFunction(nil, "foo") == nullptr);
       REQUIRE(std::holds_alternative<std::nullptr_t>(
-          t->lookupStorageLocation(&nil, "foo")));
-      REQUIRE(t->lookupType(&nil, "foo") == nullptr);
+          t->lookupStorageLocation(nil, "foo")));
+      REQUIRE(t->lookupType(nil, "foo") == nullptr);
     }
   }
 

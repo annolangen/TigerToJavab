@@ -24,22 +24,22 @@ bool StartsWith(std::string_view text, std::string_view prefix) {
 
 SCENARIO("Static checking", "[checker]") {
   GIVEN("Valid Record literal") {
-    std::vector<std::string> errors = Check(
-        "let type Bulk = {height:int, weight:int} in "
-        "Bulk {height=6, weight=200} end");
+    std::vector<std::string> errors =
+        Check("let type Bulk = {height:int, weight:int} in "
+              "Bulk {height=6, weight=200} end");
     REQUIRE(errors.size() == 0);
   }
   GIVEN("Missing field") {
-    std::vector<std::string> errors = Check(
-        "let type Bulk = {height:int, weight:int} in "
-        "Bulk {height=6} end");
+    std::vector<std::string> errors =
+        Check("let type Bulk = {height:int, weight:int} in "
+              "Bulk {height=6} end");
     REQUIRE(errors.size() == 1);
     REQUIRE(errors[0] == "Type Bulk has 2 fields and literal has 1");
   }
   GIVEN("Fields out of order") {
-    std::vector<std::string> errors = Check(
-        "let type Bulk = {height:int, weight:int} in "
-        "Bulk {weight=200, height=6} end");
+    std::vector<std::string> errors =
+        Check("let type Bulk = {height:int, weight:int} in "
+              "Bulk {weight=200, height=6} end");
     REQUIRE(errors.size() == 2);
     // Require that both errors complain about different names, but don't insist
     // on a particular order.
@@ -47,17 +47,17 @@ SCENARIO("Static checking", "[checker]") {
     REQUIRE(StartsWith(errors[1], "Different names"));
   }
   GIVEN("Wrong field type") {
-    std::vector<std::string> errors = Check(
-        "let type Bulk = {height:int, weight:int} in "
-        "Bulk {height=\"6 feet\", weight=200} end");
+    std::vector<std::string> errors =
+        Check("let type Bulk = {height:int, weight:int} in "
+              "Bulk {height=\"6 feet\", weight=200} end");
     REQUIRE(errors.size() == 1);
     REQUIRE(errors[0] ==
             "Different types string and int for field #1 of record Bulk");
   }
   GIVEN("Wrong type") {
-    std::vector<std::string> errors = Check(
-        "let type Bulk = {height:int, weight:int} in "
-        "Heft {height=6, weight=200} end");
+    std::vector<std::string> errors =
+        Check("let type Bulk = {height:int, weight:int} in "
+              "Heft {height=6, weight=200} end");
     REQUIRE(errors.size() == 1);
     REQUIRE(errors[0] == "Unknown record type Heft");
   }
@@ -205,38 +205,38 @@ end)");
 
   GIVEN("Structure checks") {
     WHEN("Break outside loop") {
-       auto errors = Check("break");
-       REQUIRE(errors.size() == 1);
-       REQUIRE(errors[0] == "Break must be inside a loop");
+      auto errors = Check("break");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Break must be inside a loop");
     }
     WHEN("Break inside loop") {
-       auto errors = Check("while 1 do break");
-       REQUIRE(errors.empty());
+      auto errors = Check("while 1 do break");
+      REQUIRE(errors.empty());
     }
     WHEN("Loop returning value") {
-       auto errors = Check("while 1 do 5");
-       REQUIRE(errors.size() == 1);
-       REQUIRE(errors[0] == "Loop body must not return a value");
+      auto errors = Check("while 1 do 5");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Loop body must not return a value");
     }
     WHEN("For loop returning value") {
-       auto errors = Check("for i := 0 to 10 do 5");
-       REQUIRE(errors.size() == 1);
-       REQUIRE(errors[0] == "Loop body must not return a value");
+      auto errors = Check("for i := 0 to 10 do 5");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "Loop body must not return a value");
     }
     WHEN("For loop var assignment") {
-       auto errors = Check("for i := 0 to 10 do i := i + 1");
-       REQUIRE(errors.size() == 1);
-       REQUIRE(errors[0] == "For loop variable i may not be assigned to");
+      auto errors = Check("for i := 0 to 10 do i := i + 1");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "For loop variable i may not be assigned to");
     }
     WHEN("If-then-else mismatch") {
-       auto errors = Check("if 1 then 5 else \"s\"");
-       REQUIRE(errors.size() == 1);
-       REQUIRE(errors[0] == "If-then-else branches must have same type");
+      auto errors = Check("if 1 then 5 else \"s\"");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "If-then-else branches must have same type");
     }
     WHEN("If-then-else void mismatch") {
-       auto errors = Check("if 1 then 5 else ()"); 
-       REQUIRE(errors.size() == 1); 
-       REQUIRE(errors[0] == "If-then-else branches must have same type");
+      auto errors = Check("if 1 then 5 else ()");
+      REQUIRE(errors.size() == 1);
+      REQUIRE(errors[0] == "If-then-else branches must have same type");
     }
   }
 
@@ -256,19 +256,22 @@ end)");
       REQUIRE(errors[0] == "Duplicate type definition: a");
     }
     WHEN("Duplicate function definition") {
-      auto errors = Check("let function f():int=0 function f():string=\"s\" in 0 end");
+      auto errors =
+          Check("let function f():int=0 function f():string=\"s\" in 0 end");
       REQUIRE(errors.size() == 1);
       REQUIRE(errors[0] == "Duplicate function definition: f");
     }
     WHEN("Variable init mismatch") {
       auto errors = Check("let var x:int := \"s\" in 0 end");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] == "Variable x declared type int but initialized with string");
+      REQUIRE(errors[0] ==
+              "Variable x declared type int but initialized with string");
     }
     WHEN("Function return mismatch") {
       auto errors = Check("let function f():int = \"s\" in 0 end");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] == "Function f declared to return int but body returns string");
+      REQUIRE(errors[0] ==
+              "Function f declared to return int but body returns string");
     }
     WHEN("Procedure return value") {
       auto errors = Check("let function f() = 5 in 0 end");
@@ -285,7 +288,8 @@ end)");
 
   GIVEN("Function call checks") {
     WHEN("Valid function call") {
-      auto errors = Check("let function f(a:int, b:string):int = a in f(5, \"hello\") end");
+      auto errors = Check(
+          "let function f(a:int, b:string):int = a in f(5, \"hello\") end");
       REQUIRE(errors.empty());
     }
     WHEN("Argument count mismatch") {
@@ -296,14 +300,17 @@ end)");
     WHEN("Argument type mismatch") {
       auto errors = Check("let function f(a:int):int = a in f(\"hello\") end");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] == "Argument 1 of function f expects type int but got string");
+      REQUIRE(errors[0] ==
+              "Argument 1 of function f expects type int but got string");
     }
     WHEN("Argument type alias") {
-      auto errors = Check("let type myint = int function f(a:myint):int = 5 var x := 5 in f(x) end");
+      auto errors = Check("let type myint = int function f(a:myint):int = 5 "
+                          "var x := 5 in f(x) end");
       REQUIRE(errors.empty());
     }
     WHEN("Argument nil for record") {
-      auto errors = Check("let type r = {x:int} function f(a:r):int = 0 in f(nil) end");
+      auto errors =
+          Check("let type r = {x:int} function f(a:r):int = 0 in f(nil) end");
       REQUIRE(errors.empty());
     }
     WHEN("Argument nil for int") {
@@ -315,4 +322,4 @@ end)");
   }
 }
 
-}  // namespace
+} // namespace

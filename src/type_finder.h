@@ -8,7 +8,7 @@
 // should be created once and passed by reference. Errors detected during type
 // inference, like undeclared variables, are appended to the given vector.
 class TypeFinder {
- public:
+public:
   TypeFinder(const SymbolTable& symbols, std::vector<std::string>& errors)
       : symbols_(symbols), errors_(errors) {}
   TypeFinder() = delete;
@@ -20,9 +20,10 @@ class TypeFinder {
 
   // Returns the type-id of the given expression, or "NOTYPE" in case of errors.
   // NOTE:
-  // - For simple types and aliases, this returns the declared name (e.g. "myint").
-  // - For the special `nil` value, this returns "NOTYPE" or "nil" depending on context,
-  //   requiring specific handling in checkers (e.g. `is_nil` checks).
+  // - For simple types and aliases, returns the declared name (e.g. "myint").
+  // - For the special `nil` value, returns "NOTYPE" or "nil"
+  //   depending on context, requiring specific handling in checkers
+  //   (e.g. `is_nil` checks).
   // - Loop variables are resolved to "int".
   std::string_view operator()(const syntax::Expr& id);
   std::string_view operator()(const syntax::VariableDeclaration& vd) {
@@ -32,7 +33,7 @@ class TypeFinder {
   std::string_view GetLValueType(const syntax::Expr& parent,
                                  const syntax::LValue& lvalue);
 
- private:
+private:
   const SymbolTable& symbols_;
   std::vector<std::string>& errors_;
   std::unordered_map<const syntax::Expr*, std::string_view> cache_;

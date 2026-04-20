@@ -17,10 +17,10 @@ struct DriverOptions {
 };
 // Conducting the whole scanning and parsing of Tiger compiler.
 class Driver {
- public:
+public:
   Driver(DriverOptions options = {}) : options_(options) {}
   virtual ~Driver();
-  
+
   std::unique_ptr<syntax::Expr> result;
 
   // Handling the scanner.
@@ -39,6 +39,6 @@ class Driver {
   void error(const yy::location& l, const std::string& m);
   void error(const std::string& m);
 
-  private:
+private:
   DriverOptions options_;
 };

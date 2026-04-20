@@ -16,4 +16,4 @@ std::vector<FieldAssignment> Add(std::vector<FieldAssignment> v, std::string id,
   v.emplace_back(FieldAssignment{std::move(id), std::move(expr)});
   return std::move(v);
 }
-}  // namespace syntax
+} // namespace syntax
