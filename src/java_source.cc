@@ -101,6 +101,11 @@ struct Compiler {
   const Scope* local_scope = nullptr;
   const syntax::Expr* current_expr = nullptr;
   const Scope* req_scope = nullptr;
+  int indent_level = 2;
+
+  std::string indent() const {
+    return std::string(indent_level * 2, ' ');
+  }
 
   std::string GetScopePath(const Scope* target_scope) {
     if (!target_scope || !local_scope) return "";
@@ -188,7 +193,7 @@ struct Compiler {
   }
   void operator()(const syntax::Assignment& expr) {
     std::ostringstream lval_out;
-    Compiler lval_compiler{symbols, types, lval_out, post_body, "", local_scope, current_expr, req_scope};
+    Compiler lval_compiler{symbols, types, lval_out, post_body, "", local_scope, current_expr, req_scope, indent_level};
     lval_compiler(*expr.l_value);
     current_lvalue = lval_out.str();
 
@@ -231,30 +236,39 @@ struct Compiler {
     (*this)(*expr.size);
     out << "];\n";
     if (current_lvalue.empty()) return;
-    out << "    Arrays.fill(" << current_lvalue << ", ";
+    out << indent() << "Arrays.fill(" << current_lvalue << ", ";
     (*this)(*expr.value);
     out << ")";
   }
   void operator()(const syntax::IfThen& expr) {
     out << "if (";
     (*this)(*expr.condition);
-    out << ") {\n      ";
+    out << ") {\n";
+    indent_level++;
+    out << indent();
     (*this)(*expr.then_expr);
     if (NeedsSemicolon(types, *expr.then_expr)) out << ";";
-    out << "\n    }";
+    indent_level--;
+    out << "\n" << indent() << "}";
   }
   void operator()(const syntax::IfThenElse& expr) {
     std::string_view type = types(*expr.then_expr);
     if (type.empty() || type == "void" || type == "Object" || type == "NOTYPE") {
       out << "if (";
       (*this)(*expr.condition);
-      out << ") {\n      ";
+      out << ") {\n";
+      indent_level++;
+      out << indent();
       (*this)(*expr.then_expr);
       if (NeedsSemicolon(types, *expr.then_expr)) out << ";";
-      out << "\n    } else {\n      ";
+      indent_level--;
+      out << "\n" << indent() << "} else {\n";
+      indent_level++;
+      out << indent();
       (*this)(*expr.else_expr);
       if (NeedsSemicolon(types, *expr.else_expr)) out << ";";
-      out << "\n    }";
+      indent_level--;
+      out << "\n" << indent() << "}";
     } else {
       out << "(";
       (*this)(*expr.condition);
@@ -268,20 +282,26 @@ struct Compiler {
   void operator()(const syntax::While& expr) {
     out << "while (";
     (*this)(*expr.condition);
-    out << ") {\n      ";
+    out << ") {\n";
+    indent_level++;
+    out << indent();
     (*this)(*expr.body);
     if (NeedsSemicolon(types, *expr.body)) out << ";";
-    out << "\n    }";
+    indent_level--;
+    out << "\n" << indent() << "}";
   }
   void operator()(const syntax::For& expr) {
     out << "for (int " << Sanitize(expr.id) << " = ";
     (*this)(*expr.start);
     out << "; " << Sanitize(expr.id) << " <= ";
     (*this)(*expr.end);
-    out << "; " << Sanitize(expr.id) << "++) {\n      ";
+    out << "; " << Sanitize(expr.id) << "++) {\n";
+    indent_level++;
+    out << indent();
     (*this)(*expr.body);
     if (NeedsSemicolon(types, *expr.body)) out << ";";
-    out << "\n    }";
+    indent_level--;
+    out << "\n" << indent() << "}";
   }
   void operator()(const syntax::Break&) { out << "break"; }
   void operator()(const syntax::FunctionDeclaration& expr) {
@@ -289,7 +309,7 @@ struct Compiler {
     const Scope* req_scope = fn_scope ? fn_scope->parent : nullptr;
 
     std::ostringstream fn_out;
-    fn_out << "\n  static " << (expr.type_id ? GetJavaType(types, symbols, *current_expr, *expr.type_id) : "void") << " "
+    fn_out << "\n" << indent() << "static " << (expr.type_id ? GetJavaType(types, symbols, *current_expr, *expr.type_id) : "void") << " "
            << Sanitize(expr.id) << "(";
     const char* sep = "";
     if (req_scope) {
@@ -300,23 +320,24 @@ struct Compiler {
       fn_out << sep << GetJavaType(types, arg.type_id) << " " << Sanitize(arg.id);
       sep = ", ";
     }
-    fn_out << ") {\n    ";
-    Compiler sub_compiler{symbols, types, fn_out, post_body, "", fn_scope, current_expr, req_scope};
+    fn_out << ") {\n";
+    Compiler sub_compiler{symbols, types, fn_out, post_body, "", fn_scope, current_expr, req_scope, indent_level + 1};
     if (fn_scope) {
-      fn_out << "Scope" << fn_scope->id << " _scope" << fn_scope->id << " = new Scope" << fn_scope->id << "();\n    ";
+      fn_out << sub_compiler.indent() << "Scope" << fn_scope->id << " _scope" << fn_scope->id << " = new Scope" << fn_scope->id << "();\n";
       if (req_scope) {
-        fn_out << "_scope" << fn_scope->id << ".parent = _scope" << req_scope->id << ";\n    ";
+        fn_out << sub_compiler.indent() << "_scope" << fn_scope->id << ".parent = _scope" << req_scope->id << ";\n";
       }
       for (const auto& arg : expr.parameter) {
-        fn_out << "_scope" << fn_scope->id << "." << Sanitize(arg.id) << " = " << Sanitize(arg.id) << ";\n    ";
+        fn_out << sub_compiler.indent() << "_scope" << fn_scope->id << "." << Sanitize(arg.id) << " = " << Sanitize(arg.id) << ";\n";
       }
     }
     
     if (expr.body) {
+      fn_out << sub_compiler.indent();
       sub_compiler(*expr.body);
       if (NeedsSemicolon(types, *expr.body)) fn_out << ";";
     }
-    fn_out << "\n  }\n";
+    fn_out << "\n" << indent() << "}\n";
     post_body << fn_out.str();
   }
   void operator()(const syntax::VariableDeclaration&) {}
@@ -330,12 +351,14 @@ struct Compiler {
   void operator()(const syntax::Let& expr) {
     const Scope* let_scope = expr.body.empty() ? nullptr : symbols.getScope(*expr.body[0]);
     if (let_scope) {
-      out << "{\n      Scope" << let_scope->id << " _scope" << let_scope->id 
+      out << "{\n";
+      indent_level++;
+      out << indent() << "Scope" << let_scope->id << " _scope" << let_scope->id 
           << " = new Scope" << let_scope->id << "();\n";
       if (let_scope->parent && local_scope) {
-         out << "      _scope" << let_scope->id << ".parent = _scope" << local_scope->id << ";\n";
+         out << indent() << "_scope" << let_scope->id << ".parent = _scope" << local_scope->id << ";\n";
       }
-      Compiler sub_compiler{symbols, types, out, post_body, "", let_scope, current_expr, req_scope};
+      Compiler sub_compiler{symbols, types, out, post_body, "", let_scope, current_expr, req_scope, indent_level};
       
       for (const auto& decl : expr.declaration) {
         if (auto fn = std::get_if<syntax::FunctionDeclaration>(decl.get())) {
@@ -350,34 +373,42 @@ struct Compiler {
           }
         } else if (auto var = std::get_if<syntax::VariableDeclaration>(decl.get())) {
           std::string lval = "_scope" + std::to_string(let_scope->id) + "." + Sanitize(var->id);
-          out << "      " << lval << " = ";
+          out << indent() << lval << " = ";
           sub_compiler.current_lvalue = lval;
           sub_compiler(*var->value);
           sub_compiler.current_lvalue = "";
           out << ";\n";
         }
       }
-      const char* sep = "      ";
+      
+      bool first = true;
       for (const auto& stmt : expr.body) {
-        out << sep;
+        if (!first) {
+          out << "\n" << indent();
+        } else {
+          out << indent();
+        }
+        first = false;
         sub_compiler(*stmt);
         if (NeedsSemicolon(types, *stmt)) {
           out << ";";
         }
-        sep = "\n      ";
       }
-      out << "    }";
+      indent_level--;
+      out << "\n" << indent() << "}";
     }
   }
   void operator()(const syntax::Parenthesized& expr) {
-    const char* sep = "";
+    bool first = true;
     for (auto& e : expr.exprs) {
-      out << sep;
+      if (!first) {
+        out << "\n" << indent();
+      }
+      first = false;
       (*this)(*e);
       if (NeedsSemicolon(types, *e)) {
         out << ";";
       }
-      sep = "\n      ";
     }
   }
 };
@@ -400,7 +431,7 @@ std::string Compile(const syntax::Expr& expr, const SymbolTable& t,
       body << "Scope" << main_scope->id << " _scope" << main_scope->id << " = new Scope" << main_scope->id << "();\n    ";
   }
 
-  Compiler compile{t, tf, body, post_body, "", main_scope, nullptr, nullptr};
+  Compiler compile{t, tf, body, post_body, "", main_scope, nullptr, nullptr, 2};
   compile(expr);
 
   body << "\n  }\n";
