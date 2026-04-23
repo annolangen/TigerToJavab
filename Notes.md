@@ -29,3 +29,9 @@ Should the grammar be refactored using a new token to capture "id '[' expr ']'"?
 - Identifiers must be escaped with \_ to avoid Java keywords
 - Implement scopes by passing all accessed variables as parameters
 - Functions can be static methods of a main class
+
+### Insights from Scope and Java Generation
+
+- **Scope Resolution:** The `SymbolTable` API `getScope(expr)` returns the enclosing scope for a node (the scope the expression is evaluated *in*), not the scope it creates. To retrieve the new scope created by a `Let`, `For`, or `FunctionDeclaration` expression, one must query the scope of its body: `getScope(*expr.body)` (or `expr.body[0]`).
+- **AST VisitChildren Behavior:** `VisitChildren` recursively traverses the children of a node. Because `Expr` is a `std::variant`, `VisitChildren(expr)` iterates over its children without invoking `operator()` on the variant member object (e.g., `For`) itself. To ensure a variant member creates its scope in `StBuilder`, `std::visit(*this, v)` must be explicitly called or intercepted correctly. Because of this, `For` loop variables currently don't generate dedicated SymbolTable scopes. In `java_source.cc`, it's actually simpler to rely on standard Java block scoping for `For` loop variables instead of manually generating a `ScopeX` class for them.
+- **Root Main Scope:** The Tiger code's standard library functions (like `print` and `flush`) are injected into the outermost scope (`Scope0`). Thus, the first `Let` expression in the program doesn't create `Scope0`, but creates `Scope1` inside it. We handle this seamlessly by manually instantiating `Scope0` at the start of `main()`.
