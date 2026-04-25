@@ -1,6 +1,6 @@
 #pragma once
 #include <ostream>
-#include <string>
+#include <string_view>
 
 enum BinaryOp {
   kNone
@@ -9,4 +9,12 @@ enum BinaryOp {
 #undef DEF_BINARY_OPERATOR
 };
 
-std::ostream& operator<<(std::ostream& os, BinaryOp op);
+inline constexpr std::string_view kBinaryOpNames[] = {"<NONE>"
+#define DEF_BINARY_OPERATOR(c, n) , n
+#include "binary_operator.defs"
+#undef DEF_BINARY_OPERATOR
+};
+
+inline std::ostream& operator<<(std::ostream& os, BinaryOp op) {
+  return os << kBinaryOpNames[static_cast<size_t>(op)];
+}

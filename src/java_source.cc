@@ -172,49 +172,19 @@ struct Compiler {
     Compile(*expr.expr);
   }
   void operator()(const syntax::Binary& expr) {
-    std::string op;
-    switch (expr.op) {
-      case kPlus:
-        op = "+";
-        break;
-      case kMinus:
-        op = "-";
-        break;
-      case kTimes:
-        op = "*";
-        break;
-      case kDivide:
-        op = "/";
-        break;
-      case kEqual:
-        op = "==";
-        break;
-      case kUnequal:
-        op = "!=";
-        break;
-      case kLessThan:
-        op = "<";
-        break;
-      case kNotGreaterThan:
-        op = "<=";
-        break;
-      case kGreaterThan:
-        op = ">";
-        break;
-      case kNotLessThan:
-        op = ">=";
-        break;
-      case kAnd:
-        op = "&&";
-        break;
-      case kOr:
-        op = "||";
-        break;
-      default:
-        break;
-    }
+    static constexpr std::string_view kJavaOps[] = {
+        "??",
+#define DEF_BINARY_OPERATOR(c, n)          \
+  (std::string_view(n) == "="       ? "==" \
+      : std::string_view(n) == "<>" ? "!=" \
+      : std::string_view(n) == "&"  ? "&&" \
+      : std::string_view(n) == "|"  ? "||" \
+                                    : n),
+#include "binary_operator.defs"
+#undef DEF_BINARY_OPERATOR
+    };
     Compile(*expr.left);
-    out << " " << op << " ";
+    out << " " << kJavaOps[static_cast<size_t>(expr.op)] << " ";
     Compile(*expr.right);
   }
   void operator()(const syntax::Assignment& expr) {
