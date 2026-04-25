@@ -85,7 +85,7 @@ struct CodeAttribute : AttributeInfo {
     Put2(os, max_locals);
     Put4(os, code_bytes.length());
     os.write(code_bytes.data(), code_bytes.length());
-    Put2(os, 0); // exception table length
+    Put2(os, 0);  // exception table length
     Put2(os, attributes.size());
     for (const auto& a : attributes) a->Emit(os);
     return os.str();
@@ -263,18 +263,13 @@ struct NameAndTypeConstant : Constant {
 class LibraryFunction : public Invocable {};
 
 const std::unordered_map<std::string_view, const char*>
-    kTypeByLibraryFunctionName = {
-        {"print", "(Ljava/lang/String;)V"},
-        {"printi", "(I)V"},
-        {"flush", "()V"},
-        {"getChar", "()Ljava/lang/String;"},
-        {"ord", "(Ljava/lang/String;)I"},
-        {"chr", "(I)Ljava/lang/String;"},
-        {"size", "(Ljava/lang/String;)I"},
+    kTypeByLibraryFunctionName = {{"print", "(Ljava/lang/String;)V"},
+        {"printi", "(I)V"}, {"flush", "()V"},
+        {"getChar", "()Ljava/lang/String;"}, {"ord", "(Ljava/lang/String;)I"},
+        {"chr", "(I)Ljava/lang/String;"}, {"size", "(Ljava/lang/String;)I"},
         {"substring", "(Ljava/lang/String;II)Ljava/lang/String;"},
         {"concat", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"},
-        {"not", "(I)I"},
-        {"exit", "(I)V"}};
+        {"not", "(I)I"}, {"exit", "(I)V"}};
 
 std::optional<const char*> LibraryFunctionType(std::string_view name) {
   if (auto found = kTypeByLibraryFunctionName.find(name);
@@ -303,8 +298,7 @@ struct JvmProgram : Program {
   }
 
   void DefineFunction(u2 flags, std::string_view name,
-                      std::string_view descriptor,
-                      std::string_view code_bytes) override {
+      std::string_view descriptor, std::string_view code_bytes) override {
     methods.push_back(methodInfo(flags, name, descriptor));
     methods.rbegin()->attributes.emplace_back(std::make_unique<CodeAttribute>(
         utf8Constant("Code").index, code_bytes));
@@ -325,21 +319,22 @@ struct JvmProgram : Program {
     u2 super_class = classConstant("java/lang/Object").index;
 
     Put4(os, 0xcafebabe);
-    Put2(os, 0);  // minor version
-    Put2(os, 50); // major version
+    Put2(os, 0);   // minor version
+    Put2(os, 50);  // major version
     Put2(os, static_cast<u2>(constant_pool.size() + 1));
     for (const auto& c : constant_pool) c->Emit(os);
-    Put2(os, 0x20); // flags
+    Put2(os, 0x20);  // flags
     Put2(os, this_class);
     Put2(os, super_class);
-    Put2(os, 0); // interfaces count
-    Put2(os, 0); // field count
+    Put2(os, 0);  // interfaces count
+    Put2(os, 0);  // field count
     Put2(os, static_cast<u2>(methods.size()));
     for (const auto& m : methods) m.Emit(os);
-    Put2(os, 0); // attributes count
+    Put2(os, 0);  // attributes count
   }
 
-  template <class T> T& Adopt(std::unique_ptr<T> t) {
+  template <class T>
+  T& Adopt(std::unique_ptr<T> t) {
     t->index = 1 + constant_pool.size();
     T* raw_ptr = t.get();
     constant_pool.emplace_back(std::move(t));
@@ -392,8 +387,8 @@ struct JvmProgram : Program {
     return Adopt(std::move(result));
   }
 
-  NameAndTypeConstant& nameAndTypeConstant(std::string_view name,
-                                           std::string_view descriptor) {
+  NameAndTypeConstant& nameAndTypeConstant(
+      std::string_view name, std::string_view descriptor) {
     u2 name_index = utf8Constant(name).index;
     u2 descriptor_index = utf8Constant(descriptor).index;
     for (auto& c : constant_pool) {
@@ -409,8 +404,7 @@ struct JvmProgram : Program {
   }
 
   MethodRefConstant& methodRefConstant(std::string_view class_name,
-                                       std::string_view name,
-                                       std::string_view type) {
+      std::string_view name, std::string_view type) {
     u2 class_index = classConstant(class_name).index;
     u2 name_and_type_index = nameAndTypeConstant(name, type).index;
     for (auto& c : constant_pool) {
@@ -425,8 +419,8 @@ struct JvmProgram : Program {
     return Adopt(std::move(result));
   }
 
-  MethodInfo methodInfo(u2 flags, std::string_view name,
-                        std::string_view descriptor) {
+  MethodInfo methodInfo(
+      u2 flags, std::string_view name, std::string_view descriptor) {
     return {
         flags, utf8Constant(name).index, utf8Constant(descriptor).index, {}};
   }
@@ -434,10 +428,10 @@ struct JvmProgram : Program {
   std::vector<std::unique_ptr<Constant>> constant_pool;
   std::vector<MethodInfo> methods;
 };
-} // namespace
+}  // namespace
 
 std::unique_ptr<Program> Program::JavaProgram() {
   return std::make_unique<JvmProgram>();
 }
 
-} // namespace emit
+}  // namespace emit

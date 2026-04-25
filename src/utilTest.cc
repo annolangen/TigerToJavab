@@ -1,8 +1,9 @@
-#include "util.h"
-#include "ToString.h"
-#include "testing/catch.h"
 #include <map>
 #include <vector>
+
+#include "ToString.h"
+#include "testing/catch.h"
+#include "util.h"
 
 namespace {
 int GetSecond(const std::pair<int, int>& p) { return p.second; }
@@ -14,11 +15,11 @@ SCENARIO("util functions", "[util]") {
   }
   GIVEN("A map") {
     std::map<int, int> big_by_small = {{5, 100}, {6, 200}};
-    REQUIRE(ToString(big_by_small |
-                     util::map([](const auto& p) { return p.first; }) |
-                     util::join("+")) == "5+6");
+    REQUIRE(ToString(big_by_small | util::map([](const auto& p) {
+      return p.first;
+    }) | util::join("+")) == "5+6");
     REQUIRE(ToString(big_by_small | util::map(GetSecond) | util::join(", ")) ==
             "100, 200");
   }
 }
-} // namespace
+}  // namespace

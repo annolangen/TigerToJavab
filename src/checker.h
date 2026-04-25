@@ -46,5 +46,5 @@
 // - (3.3) [Common sense indicates that values of a called function
 //   should have compatible types]
 
-std::vector<std::string> ListErrors(const syntax::Expr& e, const SymbolTable& t,
-                                    TypeFinder& tf);
+std::vector<std::string> ListErrors(
+    const syntax::Expr& e, const SymbolTable& t, TypeFinder& tf);

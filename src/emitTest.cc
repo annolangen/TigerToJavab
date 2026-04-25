@@ -1,12 +1,13 @@
-#include "emit.h"
-#include "instruction.h"
-#include "testing/catch.h"
-#include "testing/testing.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <streambuf>
 #include <string>
+
+#include "emit.h"
+#include "instruction.h"
+#include "testing/catch.h"
+#include "testing/testing.h"
 
 namespace {
 using emit::Program;
@@ -24,7 +25,7 @@ std::string ReadFile(const char* path) {
 void EmitAsMain(std::ostringstream& main_instructions, Program& program) {
   main_instructions.put(Instruction::_return);
   program.DefineFunction(emit::ACC_PUBLIC | emit::ACC_STATIC, "main",
-                         "([Ljava/lang/String;)V", main_instructions.str());
+      "([Ljava/lang/String;)V", main_instructions.str());
   std::ofstream out("/tmp/Main.class");
   program.Emit(out);
 }
@@ -57,4 +58,4 @@ SCENARIO("emits class file", "[emit]") {
     REQUIRE(RunJava() == "20202020");
   }
 }
-} // namespace
+}  // namespace

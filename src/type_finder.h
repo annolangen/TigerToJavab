@@ -8,7 +8,7 @@
 // should be created once and passed by reference. Errors detected during type
 // inference, like undeclared variables, are appended to the given vector.
 class TypeFinder {
-public:
+ public:
   TypeFinder(const SymbolTable& symbols, std::vector<std::string>& errors)
       : symbols_(symbols), errors_(errors) {}
   TypeFinder() = delete;
@@ -30,10 +30,10 @@ public:
     return vd.type_id ? *vd.type_id : (*this)(*vd.value);
   }
 
-  std::string_view GetLValueType(const syntax::Expr& parent,
-                                 const syntax::LValue& lvalue);
+  std::string_view GetLValueType(
+      const syntax::Expr& parent, const syntax::LValue& lvalue);
 
-private:
+ private:
   const SymbolTable& symbols_;
   std::vector<std::string>& errors_;
   std::unordered_map<const syntax::Expr*, std::string_view> cache_;

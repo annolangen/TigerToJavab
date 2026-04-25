@@ -18,7 +18,8 @@
 
 namespace util {
 namespace internal {
-template <class F, class I> struct MappedIterator {
+template <class F, class I>
+struct MappedIterator {
   I iter;
   F fn;
   const MappedIterator operator++() {
@@ -31,7 +32,8 @@ template <class F, class I> struct MappedIterator {
   auto operator*() const { return fn(*iter); }
 };
 
-template <class F, class C> struct MappedRange {
+template <class F, class C>
+struct MappedRange {
   const C& container;
   F fn;
   using Iterator = MappedIterator<F, decltype(container.begin())>;
@@ -39,39 +41,46 @@ template <class F, class C> struct MappedRange {
   Iterator end() const { return {container.end(), fn}; }
 };
 
-template <class F> struct Mapped { F fn; };
+template <class F>
+struct Mapped {
+  F fn;
+};
 
 struct Joined {
   std::string sep;
 };
 
-template <class C> struct JoinedRange {
+template <class C>
+struct JoinedRange {
   std::string sep;
   const C& range;
 };
-} // namespace internal
+}  // namespace internal
 
-template <class F> internal::Mapped<F> map(F fn) { return {fn}; }
+template <class F>
+internal::Mapped<F> map(F fn) {
+  return {fn};
+}
 
 inline internal::Joined join(const std::string&& sep) { return {sep}; }
 
-} // namespace util
+}  // namespace util
 
 template <class F, class C>
-util::internal::MappedRange<F, C> operator|(const C& container,
-                                            util::internal::Mapped<F> mapped) {
+util::internal::MappedRange<F, C> operator|(
+    const C& container, util::internal::Mapped<F> mapped) {
   return {container, mapped.fn};
 }
 
 template <class C>
-util::internal::JoinedRange<C> operator|(const C& container,
-                                         util::internal::Joined joined) {
+util::internal::JoinedRange<C> operator|(
+    const C& container, util::internal::Joined joined) {
   return {joined.sep, container};
 }
 
 template <class C>
-std::ostream& operator<<(std::ostream& os,
-                         const util::internal::JoinedRange<C>& joined) {
+std::ostream& operator<<(
+    std::ostream& os, const util::internal::JoinedRange<C>& joined) {
   const static std::string empty;
   const std::string* sep = &empty;
   for (const auto& item : joined.range) {

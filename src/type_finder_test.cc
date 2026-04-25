@@ -83,4 +83,4 @@ end)");
     REQUIRE(errors[0] == "Type not found: Foo");
   }
 }
-} // namespace
+}  // namespace

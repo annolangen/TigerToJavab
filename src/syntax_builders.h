@@ -12,8 +12,8 @@ V Add(V v, std::unique_ptr<T> e) {
 }
 
 std::vector<FieldAssignment> Add(std::vector<FieldAssignment> v, std::string id,
-                                 std::unique_ptr<Expr> expr) {
+    std::unique_ptr<Expr> expr) {
   v.emplace_back(FieldAssignment{std::move(id), std::move(expr)});
   return std::move(v);
 }
-} // namespace syntax
+}  // namespace syntax

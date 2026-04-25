@@ -24,22 +24,22 @@ bool StartsWith(std::string_view text, std::string_view prefix) {
 
 SCENARIO("Static checking", "[checker]") {
   GIVEN("Valid Record literal") {
-    std::vector<std::string> errors =
-        Check("let type Bulk = {height:int, weight:int} in "
-              "Bulk {height=6, weight=200} end");
+    std::vector<std::string> errors = Check(
+        "let type Bulk = {height:int, weight:int} in "
+        "Bulk {height=6, weight=200} end");
     REQUIRE(errors.size() == 0);
   }
   GIVEN("Missing field") {
-    std::vector<std::string> errors =
-        Check("let type Bulk = {height:int, weight:int} in "
-              "Bulk {height=6} end");
+    std::vector<std::string> errors = Check(
+        "let type Bulk = {height:int, weight:int} in "
+        "Bulk {height=6} end");
     REQUIRE(errors.size() == 1);
     REQUIRE(errors[0] == "Type Bulk has 2 fields and literal has 1");
   }
   GIVEN("Fields out of order") {
-    std::vector<std::string> errors =
-        Check("let type Bulk = {height:int, weight:int} in "
-              "Bulk {weight=200, height=6} end");
+    std::vector<std::string> errors = Check(
+        "let type Bulk = {height:int, weight:int} in "
+        "Bulk {weight=200, height=6} end");
     REQUIRE(errors.size() == 2);
     // Require that both errors complain about different names, but don't insist
     // on a particular order.
@@ -47,17 +47,17 @@ SCENARIO("Static checking", "[checker]") {
     REQUIRE(StartsWith(errors[1], "Different names"));
   }
   GIVEN("Wrong field type") {
-    std::vector<std::string> errors =
-        Check("let type Bulk = {height:int, weight:int} in "
-              "Bulk {height=\"6 feet\", weight=200} end");
+    std::vector<std::string> errors = Check(
+        "let type Bulk = {height:int, weight:int} in "
+        "Bulk {height=\"6 feet\", weight=200} end");
     REQUIRE(errors.size() == 1);
     REQUIRE(errors[0] ==
             "Different types string and int for field #1 of record Bulk");
   }
   GIVEN("Wrong type") {
-    std::vector<std::string> errors =
-        Check("let type Bulk = {height:int, weight:int} in "
-              "Heft {height=6, weight=200} end");
+    std::vector<std::string> errors = Check(
+        "let type Bulk = {height:int, weight:int} in "
+        "Heft {height=6, weight=200} end");
     REQUIRE(errors.size() == 1);
     REQUIRE(errors[0] == "Unknown record type Heft");
   }
@@ -95,7 +95,7 @@ SCENARIO("Static checking", "[checker]") {
   }
   GIVEN("string condition") {
     for (auto e : {"if \"Hello\" then printi(6)", "if \"Hello\" then 7 else 8",
-                   "while \"Hello\" do break"}) {
+             "while \"Hello\" do break"}) {
       auto errors = Check(e);
       REQUIRE(errors.size() == 1);
       REQUIRE(errors[0] == "Conditions must be int, but got string");
@@ -304,8 +304,9 @@ end)");
               "Argument 1 of function f expects type int but got string");
     }
     WHEN("Argument type alias") {
-      auto errors = Check("let type myint = int function f(a:myint):int = 5 "
-                          "var x := 5 in f(x) end");
+      auto errors = Check(
+          "let type myint = int function f(a:myint):int = 5 "
+          "var x := 5 in f(x) end");
       REQUIRE(errors.empty());
     }
     WHEN("Argument nil for record") {
@@ -322,4 +323,4 @@ end)");
   }
 }
 
-} // namespace
+}  // namespace

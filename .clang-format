@@ -1,4 +1,10 @@
-AllowShortIfStatementsOnASingleLine: true
-AllowShortLoopsOnASingleLine: true
+BasedOnStyle: Google
+ColumnLimit: 80
+IndentWidth: 2
+
+# Specific overrides for Functional C++ (std::visit/Overloaded)
+AlignAfterOpenBracket: DontAlign
+LambdaBodyIndentation: OuterScope
+
+# Density preferences
 KeepEmptyLinesAtTheStartOfBlocks: false
-PointerAlignment: Left

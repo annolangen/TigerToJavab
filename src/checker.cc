@@ -44,7 +44,8 @@ struct Checker {
 // `checker` on the current node, then recursively on its children.
 // NOTE: This performs a DEEP traversal. Use `VisitChildren` internally to
 // ensure recursion continues through all node types.
-template <class C, class Node> void CheckBelow(const Node& root, C&& checker) {
+template <class C, class Node>
+void CheckBelow(const Node& root, C&& checker) {
   checker(root);
   VisitChildren(root, [&](const auto& child) {
     CheckBelow(child, checker);
@@ -54,8 +55,8 @@ template <class C, class Node> void CheckBelow(const Node& root, C&& checker) {
 
 // Runs several checkers sequentially.
 template <class... C>
-void CheckBelow(const Expr& root, Errors& errors, const SymbolTable& t,
-                TypeFinder& tf) {
+void CheckBelow(
+    const Expr& root, Errors& errors, const SymbolTable& t, TypeFinder& tf) {
   (CheckBelow<C>(root, C{errors, t, tf}), ...);
 }
 
@@ -122,24 +123,24 @@ struct BinaryOpChecker : Checker {
     const Binary* b = std::get_if<Binary>(&e);
     if (!b) return;
     switch (b->op) {
-    case kGreaterThan:
-    case kLessThan:
-    case kNotGreaterThan:
-    case kNotLessThan:
-      CheckComparison(get_type(*b->left), get_type(*b->right), b->op);
-      break;
-    case kAnd:
-    case kOr:
-      CheckInt(get_type(*b->left), b->op);
-      CheckInt(get_type(*b->right), b->op);
-      break;
-    default:
-      break;
+      case kGreaterThan:
+      case kLessThan:
+      case kNotGreaterThan:
+      case kNotLessThan:
+        CheckComparison(get_type(*b->left), get_type(*b->right), b->op);
+        break;
+      case kAnd:
+      case kOr:
+        CheckInt(get_type(*b->left), b->op);
+        CheckInt(get_type(*b->right), b->op);
+        break;
+      default:
+        break;
     }
   }
 
-  void CheckComparison(std::string_view left_type, std::string_view right_type,
-                       BinaryOp op) {
+  void CheckComparison(
+      std::string_view left_type, std::string_view right_type, BinaryOp op) {
     CheckPrimitive(left_type, op);
     CheckPrimitive(right_type, op);
     if (left_type != right_type) {
@@ -215,8 +216,8 @@ struct NilChecker : Checker {
 // Function calls must have the same number of arguments as parameters,
 // and argument types must match parameter types.
 struct FunctionCallChecker : Checker {
-  FunctionCallChecker(Errors& errors, const SymbolTable& symbols,
-                      TypeFinder& tf)
+  FunctionCallChecker(
+      Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
       : Checker{errors, symbols, tf} {}
 
   void operator()(const auto&) {}
@@ -328,7 +329,7 @@ struct DeclarationChecker : Checker {
           }
         }
       }
-    } else { // No type declared
+    } else {  // No type declared
       if (type == "nil") {
         emit() << "Nil may only be used for records with known type";
       }
@@ -353,13 +354,12 @@ struct DeclarationChecker : Checker {
     }
   }
 
-private:
-  using DeclPtr =
-      std::variant<const TypeDeclaration*, const VariableDeclaration*,
-                   const FunctionDeclaration*>;
+ private:
+  using DeclPtr = std::variant<const TypeDeclaration*,
+      const VariableDeclaration*, const FunctionDeclaration*>;
 
-  std::vector<std::vector<DeclPtr>>
-  GroupDeclarations(const std::vector<std::unique_ptr<Declaration>>& decls) {
+  std::vector<std::vector<DeclPtr>> GroupDeclarations(
+      const std::vector<std::unique_ptr<Declaration>>& decls) {
     std::vector<std::vector<DeclPtr>> chunks;
     if (decls.empty()) return chunks;
 
@@ -371,7 +371,7 @@ private:
         chunks.back().push_back(current);
       } else {
         if (current.index() == chunks.back().back().index() &&
-            current.index() != 1) { // Same type and not Variable(1)
+            current.index() != 1) {  // Same type and not Variable(1)
           chunks.back().push_back(current);
         } else {
           chunks.push_back({current});
@@ -398,8 +398,8 @@ private:
     }
   }
 
-  bool HasIllegalCycle(const TypeDeclaration* start,
-                       const std::vector<DeclPtr>& group) {
+  bool HasIllegalCycle(
+      const TypeDeclaration* start, const std::vector<DeclPtr>& group) {
     // Valid cycle must pass through Record or Array.
     // Illegal cycle: definitions are just aliases of each other in the group.
     // e.g. type a = b; type b = a;
@@ -421,7 +421,7 @@ private:
         });
         if (it != group.end()) {
           const TypeDeclaration* next = std::get<const TypeDeclaration*>(*it);
-          if (next == start) return true; // Cycle found!
+          if (next == start) return true;  // Cycle found!
           if (visited.insert(next->id).second) {
             q.push_back(next);
           }
@@ -502,7 +502,8 @@ struct StructureChecker {
     });
   }
 
-  template <class T> void Check(const T& e) {
+  template <class T>
+  void Check(const T& e) {
     VisitChildren(e, [&](const auto& child) {
       Check(child);
       return true;
@@ -524,13 +525,12 @@ struct StructureChecker {
   }
 };
 
-} // namespace
+}  // namespace
 
 Errors ListErrors(const Expr& root, const SymbolTable& t, TypeFinder& tf) {
   Errors errors;
   CheckBelow<DeclarationChecker, RecordFieldChecker, BinaryOpChecker,
-             ConditionalChecker, NilChecker, FunctionCallChecker>(root, errors,
-                                                                  t, tf);
+      ConditionalChecker, NilChecker, FunctionCallChecker>(root, errors, t, tf);
   StructureChecker(errors, t, tf).Check(root);
   return errors;
 }

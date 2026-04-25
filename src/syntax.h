@@ -40,10 +40,10 @@ struct StringConstant {
 };
 using IntegerConstant = int;
 struct Nil {};
-using Expr = std::variant<StringConstant, IntegerConstant, Nil,
-                          std::unique_ptr<LValue>, Negated, Binary, Assignment,
-                          FunctionCall, RecordLiteral, ArrayLiteral, IfThen,
-                          IfThenElse, While, For, Break, Let, Parenthesized>;
+using Expr =
+    std::variant<StringConstant, IntegerConstant, Nil, std::unique_ptr<LValue>,
+        Negated, Binary, Assignment, FunctionCall, RecordLiteral, ArrayLiteral,
+        IfThen, IfThenElse, While, For, Break, Let, Parenthesized>;
 struct RecordField {
   std::unique_ptr<LValue> l_value;
   std::string id;
@@ -136,8 +136,12 @@ struct Let {
 };
 
 // Generic struct of lambdas for ad-hoc visitors.
-template <class... F> struct Overloaded : F... { using F::operator()...; };
-template <class... F> Overloaded(F...) -> Overloaded<F...>;
+template <class... F>
+struct Overloaded : F... {
+  using F::operator()...;
+};
+template <class... F>
+Overloaded(F...) -> Overloaded<F...>;
 
 // Overloaded template function for visiting child nodes. Returns false to
 // indicate stop.
@@ -146,94 +150,131 @@ template <class... F> Overloaded(F...) -> Overloaded<F...>;
 // When visiting a variant, it automatically dispatches to the active
 // alternative. Use this for recursive checkers to avoid writing manual
 // `std::visit` boilerplate.
-template <class F> bool VisitChildren(const StringConstant&, F&&) {
+template <class F>
+bool VisitChildren(const StringConstant&, F&&) {
   return true;
 }
-template <class F> bool VisitChildren(const Identifier&, F&&) { return true; }
-template <class F> bool VisitChildren(const IntegerConstant&, F&&) {
+template <class F>
+bool VisitChildren(const Identifier&, F&&) {
   return true;
 }
-template <class F> bool VisitChildren(const Nil&, F&&) { return true; }
-template <class F> bool VisitChildren(const Break&, F&&) { return true; }
-template <class F> bool VisitChildren(const TypeField&, F&&) { return true; }
-template <class F> bool VisitChildren(const RecordField& v, F&& f) {
+template <class F>
+bool VisitChildren(const IntegerConstant&, F&&) {
+  return true;
+}
+template <class F>
+bool VisitChildren(const Nil&, F&&) {
+  return true;
+}
+template <class F>
+bool VisitChildren(const Break&, F&&) {
+  return true;
+}
+template <class F>
+bool VisitChildren(const TypeField&, F&&) {
+  return true;
+}
+template <class F>
+bool VisitChildren(const RecordField& v, F&& f) {
   return std::invoke(f, *v.l_value);
 }
-template <class F> bool VisitChildren(const ArrayElement& v, F&& f) {
+template <class F>
+bool VisitChildren(const ArrayElement& v, F&& f) {
   return std::invoke(f, *v.l_value) && std::invoke(f, *v.expr);
 }
-template <class F> bool VisitChildren(const Negated& v, F&& f) {
+template <class F>
+bool VisitChildren(const Negated& v, F&& f) {
   return std::invoke(f, *v.expr);
 }
-template <class F> bool VisitChildren(const Binary& v, F&& f) {
+template <class F>
+bool VisitChildren(const Binary& v, F&& f) {
   return std::invoke(f, *v.left) && std::invoke(f, *v.right);
 }
-template <class F> bool VisitChildren(const Assignment& v, F&& f) {
+template <class F>
+bool VisitChildren(const Assignment& v, F&& f) {
   return std::invoke(f, *v.l_value) && std::invoke(f, *v.expr);
 }
-template <class F> bool VisitChildren(const FunctionCall& v, F&& f) {
+template <class F>
+bool VisitChildren(const FunctionCall& v, F&& f) {
   for (const auto& e : v.arguments) {
     if (!std::invoke(f, *e)) return false;
   }
   return true;
 }
-template <class F> bool VisitChildren(const FieldAssignment& v, F&& f) {
+template <class F>
+bool VisitChildren(const FieldAssignment& v, F&& f) {
   return std::invoke(f, *v.expr);
 }
-template <class F> bool VisitChildren(const RecordLiteral& v, F&& f) {
+template <class F>
+bool VisitChildren(const RecordLiteral& v, F&& f) {
   for (const FieldAssignment& a : v.fields) {
     if (!std::invoke(f, a)) return false;
   }
   return true;
 }
-template <class F> bool VisitChildren(const ArrayLiteral& v, F&& f) {
+template <class F>
+bool VisitChildren(const ArrayLiteral& v, F&& f) {
   return std::invoke(f, *v.size) && std::invoke(f, *v.value);
 }
-template <class F> bool VisitChildren(const IfThen& v, F&& f) {
+template <class F>
+bool VisitChildren(const IfThen& v, F&& f) {
   return std::invoke(f, *v.condition) && std::invoke(f, *v.then_expr);
 }
-template <class F> bool VisitChildren(const IfThenElse& v, F&& f) {
+template <class F>
+bool VisitChildren(const IfThenElse& v, F&& f) {
   return std::invoke(f, *v.condition) && std::invoke(f, *v.then_expr) &&
          std::invoke(f, *v.else_expr);
 }
-template <class F> bool VisitChildren(const While& v, F&& f) {
+template <class F>
+bool VisitChildren(const While& v, F&& f) {
   return std::invoke(f, *v.condition) && std::invoke(f, *v.body);
 }
-template <class F> bool VisitChildren(const For& v, F&& f) {
+template <class F>
+bool VisitChildren(const For& v, F&& f) {
   return std::invoke(f, *v.start) && std::invoke(f, *v.end) &&
          std::invoke(f, *v.body);
 }
-template <class F> bool VisitChildren(const Parenthesized& v, F&& f) {
+template <class F>
+bool VisitChildren(const Parenthesized& v, F&& f) {
   for (const auto& e : v.exprs) {
     if (!std::invoke(f, *e)) return false;
   }
   return true;
 }
-template <class F> bool VisitChildren(const LValue& v, F&& f) {
+template <class F>
+bool VisitChildren(const LValue& v, F&& f) {
   return std::visit([&f](const auto& e) { return VisitChildren(e, f); }, v);
 }
-template <class F> bool VisitChildren(const std::unique_ptr<LValue>& v, F&& f) {
+template <class F>
+bool VisitChildren(const std::unique_ptr<LValue>& v, F&& f) {
   return VisitChildren(*v, f);
 }
-template <class F> bool VisitChildren(const Expr& v, F&& f) {
+template <class F>
+bool VisitChildren(const Expr& v, F&& f) {
   return std::visit([&f](const auto& e) { return VisitChildren(e, f); }, v);
 }
-template <class F> bool VisitChildren(const Type& v, F&& f) {
+template <class F>
+bool VisitChildren(const Type& v, F&& f) {
   return std::visit([&f](const auto& e) { return VisitChildren(e, f); }, v);
 }
-template <class F> bool VisitChildren(const Declaration& v, F&& f) {
+template <class F>
+bool VisitChildren(const Declaration& v, F&& f) {
   return std::visit([&f](const auto& e) { return VisitChildren(e, f); }, v);
 }
-template <class F> bool VisitChildren(const VariableDeclaration& v, F&& f) {
+template <class F>
+bool VisitChildren(const VariableDeclaration& v, F&& f) {
   return std::invoke(f, *v.value);
 }
-template <class F> bool VisitChildren(const FunctionDeclaration& v, F&& f) {
+template <class F>
+bool VisitChildren(const FunctionDeclaration& v, F&& f) {
   return std::invoke(f, *v.body);
 }
-template <class F> bool VisitChildren(const TypeDeclaration&, F&&) {
+template <class F>
+bool VisitChildren(const TypeDeclaration&, F&&) {
   return true;
 }
-template <class F> bool VisitChildren(const Let& v, F&& f) {
+template <class F>
+bool VisitChildren(const Let& v, F&& f) {
   for (const auto& d : v.declaration) {
     if (!std::invoke(f, *d)) return false;
   }
@@ -242,4 +283,4 @@ template <class F> bool VisitChildren(const Let& v, F&& f) {
   }
   return true;
 }
-} // namespace syntax
+}  // namespace syntax

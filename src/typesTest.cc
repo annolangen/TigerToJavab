@@ -71,20 +71,23 @@ SCENARIO("types functions", "[types]") {
       HasType("let var a := 666 in a + 3 end", "int");
     }
     GIVEN("Complex case") {
-      HasType("let type T = int in let type T = string var a : T := \"Hello\" "
-              "in a end end",
-              "T");
+      HasType(
+          "let type T = int in let type T = string var a : T := \"Hello\" "
+          "in a end end",
+          "T");
       HasType("a", "???");
       HasType("let function f():int = g() function g():int = f() in f() end",
-              "int");
+          "int");
       HasType("let function f() = g() function g() = f() in f() end", "unset");
       HasType("nil", "unset");
-      HasType("let type Bulk = {height:int, weight:int}"
-              " var b := nil in b end",
-              "unset");
-      HasType("let type Bulk = {height:int, weight:int}"
-              " var b : Bulk := nil in b end",
-              "Bulk");
+      HasType(
+          "let type Bulk = {height:int, weight:int}"
+          " var b := nil in b end",
+          "unset");
+      HasType(
+          "let type Bulk = {height:int, weight:int}"
+          " var b : Bulk := nil in b end",
+          "Bulk");
     }
 
     // Composite expressions
@@ -94,4 +97,4 @@ SCENARIO("types functions", "[types]") {
     // let declaration-list in expr-seqopt end
   }
 }
-} // namespace
+}  // namespace
