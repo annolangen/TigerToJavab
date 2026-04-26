@@ -14,8 +14,6 @@ int Driver::parse(const std::string& f) {
   return res;
 }
 
-void Driver::error(const yy::location& l, const std::string& m) {
-  std::cerr << l << ": " << m << std::endl;
-}
+void Driver::error(const yy::location& l, const std::string& m) { std::cerr << l << ": " << m << std::endl; }
 
 void Driver::error(const std::string& m) { std::cerr << m << std::endl; }

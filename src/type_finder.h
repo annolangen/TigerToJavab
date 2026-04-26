@@ -9,8 +9,7 @@
 // inference, like undeclared variables, are appended to the given vector.
 class TypeFinder {
  public:
-  TypeFinder(const SymbolTable& symbols, std::vector<std::string>& errors)
-      : symbols_(symbols), errors_(errors) {}
+  TypeFinder(const SymbolTable& symbols, std::vector<std::string>& errors) : symbols_(symbols), errors_(errors) {}
   TypeFinder() = delete;
   ~TypeFinder() = default;
   TypeFinder(const TypeFinder&) = delete;
@@ -30,8 +29,7 @@ class TypeFinder {
     return vd.type_id ? *vd.type_id : (*this)(*vd.value);
   }
 
-  std::string_view GetLValueType(
-      const syntax::Expr& parent, const syntax::LValue& lvalue);
+  std::string_view GetLValueType(const syntax::Expr& parent, const syntax::LValue& lvalue);
 
  private:
   const SymbolTable& symbols_;

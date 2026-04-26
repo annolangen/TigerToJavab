@@ -55,8 +55,7 @@ void CheckBelow(const Node& root, C&& checker) {
 
 // Runs several checkers sequentially.
 template <class... C>
-void CheckBelow(
-    const Expr& root, Errors& errors, const SymbolTable& t, TypeFinder& tf) {
+void CheckBelow(const Expr& root, Errors& errors, const SymbolTable& t, TypeFinder& tf) {
   (CheckBelow<C>(root, C{errors, t, tf}), ...);
 }
 
@@ -65,8 +64,7 @@ static std::unordered_set<std::string_view> kBuiltinTypes{"int", "string"};
 // Record literal field names, expression types, and the order
 // thereof must exactly match those of the given record type (2.3)
 struct RecordFieldChecker : Checker {
-  RecordFieldChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
-      : Checker{errors, symbols, tf} {}
+  RecordFieldChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf) : Checker{errors, symbols, tf} {}
   void operator()(const auto&) {}
   void operator()(const Expr& e) {
     const RecordLiteral* lit = std::get_if<RecordLiteral>(&e);
@@ -92,21 +90,18 @@ struct RecordFieldChecker : Checker {
     }
     const std::vector<FieldAssignment>& assignments = lit->fields;
     if (assignments.size() != tf->size()) {
-      emit() << "Type " << d->id << " has " << tf->size()
-             << " fields and literal has " << assignments.size();
+      emit() << "Type " << d->id << " has " << tf->size() << " fields and literal has " << assignments.size();
       return;
     }
     // > Field names, expression types, and the order thereof must exactly match
     // > those of the given record type.
     for (size_t i = 0; i < tf->size(); ++i) {
       if (assignments[i].id != tf->at(i).id) {
-        emit() << "Different names " << assignments[i].id << " and "
-               << tf->at(i).id << " for field #" << (i + 1) << " of record "
+        emit() << "Different names " << assignments[i].id << " and " << tf->at(i).id << " for field #" << (i + 1)
+               << " of record " << d->id;
+      } else if (std::string_view t = get_type(*assignments[i].expr); t != tf->at(i).type_id) {
+        emit() << "Different types " << t << " and " << tf->at(i).type_id << " for field #" << (i + 1) << " of record "
                << d->id;
-      } else if (std::string_view t = get_type(*assignments[i].expr);
-                 t != tf->at(i).type_id) {
-        emit() << "Different types " << t << " and " << tf->at(i).type_id
-               << " for field #" << (i + 1) << " of record " << d->id;
       }
     }
   }
@@ -115,8 +110,7 @@ struct RecordFieldChecker : Checker {
 // Binary operators >, <, >=, and <= may be either both integer or both string
 // (2.5). Operators & and | are lazy logical operators on integers (2.5)
 struct BinaryOpChecker : Checker {
-  BinaryOpChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
-      : Checker{errors, symbols, tf} {}
+  BinaryOpChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf) : Checker{errors, symbols, tf} {}
 
   void operator()(const auto&) {}
   void operator()(const Expr& e) {
@@ -139,19 +133,16 @@ struct BinaryOpChecker : Checker {
     }
   }
 
-  void CheckComparison(
-      std::string_view left_type, std::string_view right_type, BinaryOp op) {
+  void CheckComparison(std::string_view left_type, std::string_view right_type, BinaryOp op) {
     CheckPrimitive(left_type, op);
     CheckPrimitive(right_type, op);
     if (left_type != right_type) {
-      emit() << "Types of " << op << " should match, but got " << left_type
-             << " and " << right_type;
+      emit() << "Types of " << op << " should match, but got " << left_type << " and " << right_type;
     }
   }
   void CheckPrimitive(std::string_view type, BinaryOp op) {
     if (!kBuiltinTypes.contains(type)) {
-      emit() << "Operand type of " << op << " must be int or string, but got "
-             << type;
+      emit() << "Operand type of " << op << " must be int or string, but got " << type;
     }
   }
   void CheckInt(std::string_view type, BinaryOp op) {
@@ -163,8 +154,7 @@ struct BinaryOpChecker : Checker {
 
 // Conditionals must evaluate to integers (2.8)
 struct ConditionalChecker : Checker {
-  ConditionalChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
-      : Checker{errors, symbols, tf} {}
+  ConditionalChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf) : Checker{errors, symbols, tf} {}
 
   void operator()(const auto&) {}
   void operator()(const Expr& e) {
@@ -187,8 +177,7 @@ struct ConditionalChecker : Checker {
 
 // Nil may only be used for records with known type (2.7)
 struct NilChecker : Checker {
-  NilChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
-      : Checker{errors, symbols, tf} {}
+  NilChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf) : Checker{errors, symbols, tf} {}
 
   void operator()(const auto&) {}
   void operator()(const Expr& e) {
@@ -216,9 +205,7 @@ struct NilChecker : Checker {
 // Function calls must have the same number of arguments as parameters,
 // and argument types must match parameter types.
 struct FunctionCallChecker : Checker {
-  FunctionCallChecker(
-      Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
-      : Checker{errors, symbols, tf} {}
+  FunctionCallChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf) : Checker{errors, symbols, tf} {}
 
   void operator()(const auto&) {}
   void operator()(const Expr& e) {
@@ -229,8 +216,8 @@ struct FunctionCallChecker : Checker {
     if (!fd) return;
 
     if (fc->arguments.size() != fd->parameter.size()) {
-      emit() << "Function " << fc->id << " expects " << fd->parameter.size()
-             << " arguments, but got " << fc->arguments.size();
+      emit() << "Function " << fc->id << " expects " << fd->parameter.size() << " arguments, but got "
+             << fc->arguments.size();
       return;
     }
 
@@ -250,13 +237,11 @@ struct FunctionCallChecker : Checker {
         }
       }
 
-      if (arg_type != expected_type && arg_type != "NOTYPE" &&
-          arg_type != "nil") {
-        emit() << "Argument " << i + 1 << " of function " << fc->id
-               << " expects type " << declared_type << " but got " << arg_type;
+      if (arg_type != expected_type && arg_type != "NOTYPE" && arg_type != "nil") {
+        emit() << "Argument " << i + 1 << " of function " << fc->id << " expects type " << declared_type << " but got "
+               << arg_type;
       } else if (arg_type == "nil") {
-        const TypeDeclaration* decl =
-            symbols.lookupUnaliasedType(e, declared_type);
+        const TypeDeclaration* decl = symbols.lookupUnaliasedType(e, declared_type);
         if (!decl || !std::get_if<TypeFields>(&decl->value)) {
           emit() << "Type " << declared_type << " is not a record type";
         }
@@ -272,8 +257,7 @@ struct FunctionCallChecker : Checker {
 // - No two functions in a declaration sequence may have the same name (3.3)
 // - Functions return a value of the specified type (3.3)
 struct DeclarationChecker : Checker {
-  DeclarationChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf)
-      : Checker{errors, symbols, tf} {}
+  DeclarationChecker(Errors& errors, const SymbolTable& symbols, TypeFinder& tf) : Checker{errors, symbols, tf} {}
 
   void operator()(const auto&) {}
 
@@ -317,13 +301,11 @@ struct DeclarationChecker : Checker {
 
       if (type != declared_type && type != "NOTYPE" && type != "nil") {
         // Basic string mismatch check resolved.
-        emit() << "Variable " << v.id << " declared type " << *v.type_id
-               << " but initialized with " << type;
+        emit() << "Variable " << v.id << " declared type " << *v.type_id << " but initialized with " << type;
       } else {
         if (type == "nil") {
           // Check for nil assignment to record
-          const TypeDeclaration* decl =
-              symbols.lookupUnaliasedType(*v.value, *v.type_id);
+          const TypeDeclaration* decl = symbols.lookupUnaliasedType(*v.value, *v.type_id);
           if (!decl || !std::get_if<TypeFields>(&decl->value)) {
             emit() << "Nil may only be used for records with known type";
           }
@@ -344,8 +326,7 @@ struct DeclarationChecker : Checker {
       // declared to return the base type (`int`), or vice-versa, this will
       // incorrectly emit an error.
       if (body_type != *f.type_id) {
-        emit() << "Function " << f.id << " declared to return " << *f.type_id
-               << " but body returns " << body_type;
+        emit() << "Function " << f.id << " declared to return " << *f.type_id << " but body returns " << body_type;
       }
     } else {
       if (body_type != "NOTYPE") {
@@ -355,23 +336,19 @@ struct DeclarationChecker : Checker {
   }
 
  private:
-  using DeclPtr = std::variant<const TypeDeclaration*,
-      const VariableDeclaration*, const FunctionDeclaration*>;
+  using DeclPtr = std::variant<const TypeDeclaration*, const VariableDeclaration*, const FunctionDeclaration*>;
 
-  std::vector<std::vector<DeclPtr>> GroupDeclarations(
-      const std::vector<std::unique_ptr<Declaration>>& decls) {
+  std::vector<std::vector<DeclPtr>> GroupDeclarations(const std::vector<std::unique_ptr<Declaration>>& decls) {
     std::vector<std::vector<DeclPtr>> chunks;
     if (decls.empty()) return chunks;
 
     chunks.push_back({});
     for (const auto& d : decls) {
-      DeclPtr current =
-          std::visit([](const auto& x) -> DeclPtr { return &x; }, *d);
+      DeclPtr current = std::visit([](const auto& x) -> DeclPtr { return &x; }, *d);
       if (chunks.back().empty()) {
         chunks.back().push_back(current);
       } else {
-        if (current.index() == chunks.back().back().index() &&
-            current.index() != 1) {  // Same type and not Variable(1)
+        if (current.index() == chunks.back().back().index() && current.index() != 1) {  // Same type and not Variable(1)
           chunks.back().push_back(current);
         } else {
           chunks.push_back({current});
@@ -398,8 +375,7 @@ struct DeclarationChecker : Checker {
     }
   }
 
-  bool HasIllegalCycle(
-      const TypeDeclaration* start, const std::vector<DeclPtr>& group) {
+  bool HasIllegalCycle(const TypeDeclaration* start, const std::vector<DeclPtr>& group) {
     // Valid cycle must pass through Record or Array.
     // Illegal cycle: definitions are just aliases of each other in the group.
     // e.g. type a = b; type b = a;
@@ -416,9 +392,8 @@ struct DeclarationChecker : Checker {
       // Check RHS.
       if (const auto* alias = std::get_if<Identifier>(&curr->value)) {
         // Find definition in group
-        auto it = std::find_if(group.begin(), group.end(), [&](DeclPtr p) {
-          return std::get<const TypeDeclaration*>(p)->id == *alias;
-        });
+        auto it = std::find_if(group.begin(), group.end(),
+                               [&](DeclPtr p) { return std::get<const TypeDeclaration*>(p)->id == *alias; });
         if (it != group.end()) {
           const TypeDeclaration* next = std::get<const TypeDeclaration*>(*it);
           if (next == start) return true;  // Cycle found!
@@ -529,8 +504,8 @@ struct StructureChecker {
 
 Errors ListErrors(const Expr& root, const SymbolTable& t, TypeFinder& tf) {
   Errors errors;
-  CheckBelow<DeclarationChecker, RecordFieldChecker, BinaryOpChecker,
-      ConditionalChecker, NilChecker, FunctionCallChecker>(root, errors, t, tf);
+  CheckBelow<DeclarationChecker, RecordFieldChecker, BinaryOpChecker, ConditionalChecker, NilChecker,
+             FunctionCallChecker>(root, errors, t, tf);
   StructureChecker(errors, t, tf).Check(root);
   return errors;
 }

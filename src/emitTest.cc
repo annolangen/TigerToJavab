@@ -24,8 +24,8 @@ std::string ReadFile(const char* path) {
 // the resulting program as class file /tmp/Main.class.
 void EmitAsMain(std::ostringstream& main_instructions, Program& program) {
   main_instructions.put(Instruction::_return);
-  program.DefineFunction(emit::ACC_PUBLIC | emit::ACC_STATIC, "main",
-      "([Ljava/lang/String;)V", main_instructions.str());
+  program.DefineFunction(emit::ACC_PUBLIC | emit::ACC_STATIC, "main", "([Ljava/lang/String;)V",
+                         main_instructions.str());
   std::ofstream out("/tmp/Main.class");
   program.Emit(out);
 }

@@ -30,22 +30,16 @@ SCENARIO("types functions", "[types]") {
     auto anArray = std::make_shared<Array>("IntArray", anInt(), anInt());
     REQUIRE(InferType(*anArray) == "IntArray");
     std::vector<FieldValue> field_values;
-    field_values.push_back(
-        {"height", std::move(std::make_unique<IntegerConstant>(6))});
-    field_values.push_back(
-        {"weight", std::move(std::make_unique<IntegerConstant>(200))});
+    field_values.push_back({"height", std::move(std::make_unique<IntegerConstant>(6))});
+    field_values.push_back({"weight", std::move(std::make_unique<IntegerConstant>(200))});
     auto aRecord = std::make_shared<Record>("Bulk", std::move(field_values));
     REQUIRE(InferType(*aRecord) == "Bulk");
     GIVEN("Declarations") {
       std::vector<std::shared_ptr<Declaration>> declarations;
-      declarations.push_back(
-          std::make_unique<VariableDeclaration>("n", anInt()));
-      declarations.push_back(
-          std::make_unique<VariableDeclaration>("s", aString()));
-      declarations.push_back(std::make_unique<FunctionDeclaration>(
-          "f", std::vector<TypeField>(), anInt()));
-      declarations.push_back(std::make_unique<FunctionDeclaration>(
-          "f", std::vector<TypeField>(), "T", anInt()));
+      declarations.push_back(std::make_unique<VariableDeclaration>("n", anInt()));
+      declarations.push_back(std::make_unique<VariableDeclaration>("s", aString()));
+      declarations.push_back(std::make_unique<FunctionDeclaration>("f", std::vector<TypeField>(), anInt()));
+      declarations.push_back(std::make_unique<FunctionDeclaration>("f", std::vector<TypeField>(), "T", anInt()));
       WHEN("n") {
         std::vector<std::shared_ptr<Expression>> body;
         body.push_back(std::make_unique<IdLValue>("n"));
@@ -76,8 +70,7 @@ SCENARIO("types functions", "[types]") {
           "in a end end",
           "T");
       HasType("a", "???");
-      HasType("let function f():int = g() function g():int = f() in f() end",
-          "int");
+      HasType("let function f():int = g() function g():int = f() in f() end", "int");
       HasType("let function f() = g() function g() = f() in f() end", "unset");
       HasType("nil", "unset");
       HasType(

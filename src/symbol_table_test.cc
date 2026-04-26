@@ -15,8 +15,7 @@ SCENARIO("SymbolTable", "[SymbolTable]") {
     auto t = SymbolTable::Build(nil);
     WHEN("empty") {
       REQUIRE(t->lookupFunction(nil, "foo") == nullptr);
-      REQUIRE(std::holds_alternative<std::nullptr_t>(
-          t->lookupStorageLocation(nil, "foo")));
+      REQUIRE(std::holds_alternative<std::nullptr_t>(t->lookupStorageLocation(nil, "foo")));
       REQUIRE(t->lookupType(nil, "foo") == nullptr);
     }
   }
@@ -80,18 +79,14 @@ end)");
     auto t = SymbolTable::Build(*expr);
 
     // Check that `g` is visible from within `f`
-    const auto& f_decl =
-        std::get<FunctionDeclaration>(*std::get<Let>(*expr).declaration[0]);
-    const FunctionDeclaration* g_lookup_from_f =
-        t->lookupFunction(*f_decl.body, "g");
+    const auto& f_decl = std::get<FunctionDeclaration>(*std::get<Let>(*expr).declaration[0]);
+    const FunctionDeclaration* g_lookup_from_f = t->lookupFunction(*f_decl.body, "g");
     REQUIRE(g_lookup_from_f != nullptr);
     REQUIRE(g_lookup_from_f->id == "g");
 
     // Check that `f` is visible from within `g`
-    const auto& g_decl =
-        std::get<FunctionDeclaration>(*std::get<Let>(*expr).declaration[1]);
-    const FunctionDeclaration* f_lookup_from_g =
-        t->lookupFunction(*g_decl.body, "f");
+    const auto& g_decl = std::get<FunctionDeclaration>(*std::get<Let>(*expr).declaration[1]);
+    const FunctionDeclaration* f_lookup_from_g = t->lookupFunction(*g_decl.body, "f");
     REQUIRE(f_lookup_from_g != nullptr);
     REQUIRE(f_lookup_from_g->id == "f");
   }

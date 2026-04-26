@@ -19,11 +19,7 @@ std::string DebugString(const T& item, DebugStringOptions options = {}) {
 }
 
 // Family of functions that return their stream reference argument.
-std::ostream& AppendDebugString(const syntax::Declaration& d, std::ostream& out,
-    DebugStringOptions options = {});
-std::ostream& AppendDebugString(
-    const syntax::Expr& e, std::ostream& out, DebugStringOptions options = {});
-std::ostream& AppendDebugString(const syntax::LValue& v, std::ostream& out,
-    DebugStringOptions options = {});
-std::ostream& AppendDebugString(
-    const syntax::Type& t, std::ostream& out, DebugStringOptions options = {});
+std::ostream& AppendDebugString(const syntax::Declaration& d, std::ostream& out, DebugStringOptions options = {});
+std::ostream& AppendDebugString(const syntax::Expr& e, std::ostream& out, DebugStringOptions options = {});
+std::ostream& AppendDebugString(const syntax::LValue& v, std::ostream& out, DebugStringOptions options = {});
+std::ostream& AppendDebugString(const syntax::Type& t, std::ostream& out, DebugStringOptions options = {});

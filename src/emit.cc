@@ -158,9 +158,7 @@ struct Constant {
 struct Ref : Constant {
   u2 class_index;
   u2 name_and_type_index;
-  bool Matches(u2 first, u2 second) const override {
-    return class_index == first && name_and_type_index == second;
-  }
+  bool Matches(u2 first, u2 second) const override { return class_index == first && name_and_type_index == second; }
   void Emit(std::ostream& os) const override {
     os.put(tag());
     Put2(os, class_index);
@@ -233,9 +231,7 @@ struct ClassConstant : Constant {
 struct Utf8Constant : Constant {
   std::string text;
   Tag tag() const override { return kUtf8; }
-  bool Matches(std::string_view match_text) const override {
-    return text == match_text;
-  }
+  bool Matches(std::string_view match_text) const override { return text == match_text; }
   std::optional<Utf8Constant*> utf8() override { return this; }
   void Emit(std::ostream& os) const override {
     os.put(tag());
@@ -249,9 +245,7 @@ struct NameAndTypeConstant : Constant {
   u2 name_index;
   u2 descriptor_index;
   Tag tag() const override { return kNameAndType; }
-  bool Matches(u2 first, u2 second) const override {
-    return name_index == first && descriptor_index == second;
-  }
+  bool Matches(u2 first, u2 second) const override { return name_index == first && descriptor_index == second; }
   std::optional<NameAndTypeConstant*> nameAndType() override { return this; }
   void Emit(std::ostream& os) const override {
     os.put(tag());
@@ -262,18 +256,21 @@ struct NameAndTypeConstant : Constant {
 
 class LibraryFunction : public Invocable {};
 
-const std::unordered_map<std::string_view, const char*>
-    kTypeByLibraryFunctionName = {{"print", "(Ljava/lang/String;)V"},
-        {"printi", "(I)V"}, {"flush", "()V"},
-        {"getChar", "()Ljava/lang/String;"}, {"ord", "(Ljava/lang/String;)I"},
-        {"chr", "(I)Ljava/lang/String;"}, {"size", "(Ljava/lang/String;)I"},
-        {"substring", "(Ljava/lang/String;II)Ljava/lang/String;"},
-        {"concat", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"},
-        {"not", "(I)I"}, {"exit", "(I)V"}};
+const std::unordered_map<std::string_view, const char*> kTypeByLibraryFunctionName = {
+    {"print", "(Ljava/lang/String;)V"},
+    {"printi", "(I)V"},
+    {"flush", "()V"},
+    {"getChar", "()Ljava/lang/String;"},
+    {"ord", "(Ljava/lang/String;)I"},
+    {"chr", "(I)Ljava/lang/String;"},
+    {"size", "(Ljava/lang/String;)I"},
+    {"substring", "(Ljava/lang/String;II)Ljava/lang/String;"},
+    {"concat", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;"},
+    {"not", "(I)I"},
+    {"exit", "(I)V"}};
 
 std::optional<const char*> LibraryFunctionType(std::string_view name) {
-  if (auto found = kTypeByLibraryFunctionName.find(name);
-      found != kTypeByLibraryFunctionName.end()) {
+  if (auto found = kTypeByLibraryFunctionName.find(name); found != kTypeByLibraryFunctionName.end()) {
     return found->second;
   }
   return {};
@@ -283,12 +280,8 @@ struct JvmProgram : Program {
   JvmProgram() = default;
   ~JvmProgram() override = default;
 
-  const Pushable& DefineStringConstant(std::string_view text) override {
-    return stringConstant(text);
-  }
-  const Pushable& DefineIntegerConstant(int i) override {
-    return integerConstant(i);
-  }
+  const Pushable& DefineStringConstant(std::string_view text) override { return stringConstant(text); }
+  const Pushable& DefineIntegerConstant(int i) override { return integerConstant(i); }
 
   const Invocable* LookupLibraryFunction(std::string_view name) override {
     if (auto found = LibraryFunctionType(name); found) {
@@ -297,11 +290,10 @@ struct JvmProgram : Program {
     return nullptr;
   }
 
-  void DefineFunction(u2 flags, std::string_view name,
-      std::string_view descriptor, std::string_view code_bytes) override {
+  void DefineFunction(u2 flags, std::string_view name, std::string_view descriptor,
+                      std::string_view code_bytes) override {
     methods.push_back(methodInfo(flags, name, descriptor));
-    methods.rbegin()->attributes.emplace_back(std::make_unique<CodeAttribute>(
-        utf8Constant("Code").index, code_bytes));
+    methods.rbegin()->attributes.emplace_back(std::make_unique<CodeAttribute>(utf8Constant("Code").index, code_bytes));
   };
 
   void DefineConstructor() {
@@ -387,13 +379,11 @@ struct JvmProgram : Program {
     return Adopt(std::move(result));
   }
 
-  NameAndTypeConstant& nameAndTypeConstant(
-      std::string_view name, std::string_view descriptor) {
+  NameAndTypeConstant& nameAndTypeConstant(std::string_view name, std::string_view descriptor) {
     u2 name_index = utf8Constant(name).index;
     u2 descriptor_index = utf8Constant(descriptor).index;
     for (auto& c : constant_pool) {
-      if (c->tag() == ClassConstant::kNameAndType &&
-          c->Matches(name_index, descriptor_index)) {
+      if (c->tag() == ClassConstant::kNameAndType && c->Matches(name_index, descriptor_index)) {
         return **c->nameAndType();
       }
     }
@@ -403,13 +393,11 @@ struct JvmProgram : Program {
     return Adopt(std::move(result));
   }
 
-  MethodRefConstant& methodRefConstant(std::string_view class_name,
-      std::string_view name, std::string_view type) {
+  MethodRefConstant& methodRefConstant(std::string_view class_name, std::string_view name, std::string_view type) {
     u2 class_index = classConstant(class_name).index;
     u2 name_and_type_index = nameAndTypeConstant(name, type).index;
     for (auto& c : constant_pool) {
-      if (c->tag() == ClassConstant::kMethodref &&
-          c->Matches(class_index, name_and_type_index)) {
+      if (c->tag() == ClassConstant::kMethodref && c->Matches(class_index, name_and_type_index)) {
         return **c->methodRef();
       }
     }
@@ -419,10 +407,8 @@ struct JvmProgram : Program {
     return Adopt(std::move(result));
   }
 
-  MethodInfo methodInfo(
-      u2 flags, std::string_view name, std::string_view descriptor) {
-    return {
-        flags, utf8Constant(name).index, utf8Constant(descriptor).index, {}};
+  MethodInfo methodInfo(u2 flags, std::string_view name, std::string_view descriptor) {
+    return {flags, utf8Constant(name).index, utf8Constant(descriptor).index, {}};
   }
 
   std::vector<std::unique_ptr<Constant>> constant_pool;
@@ -430,8 +416,6 @@ struct JvmProgram : Program {
 };
 }  // namespace
 
-std::unique_ptr<Program> Program::JavaProgram() {
-  return std::make_unique<JvmProgram>();
-}
+std::unique_ptr<Program> Program::JavaProgram() { return std::make_unique<JvmProgram>(); }
 
 }  // namespace emit

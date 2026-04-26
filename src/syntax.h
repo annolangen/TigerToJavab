@@ -41,9 +41,8 @@ struct StringConstant {
 using IntegerConstant = int;
 struct Nil {};
 using Expr =
-    std::variant<StringConstant, IntegerConstant, Nil, std::unique_ptr<LValue>,
-        Negated, Binary, Assignment, FunctionCall, RecordLiteral, ArrayLiteral,
-        IfThen, IfThenElse, While, For, Break, Let, Parenthesized>;
+    std::variant<StringConstant, IntegerConstant, Nil, std::unique_ptr<LValue>, Negated, Binary, Assignment,
+                 FunctionCall, RecordLiteral, ArrayLiteral, IfThen, IfThenElse, While, For, Break, Let, Parenthesized>;
 struct RecordField {
   std::unique_ptr<LValue> l_value;
   std::string id;
@@ -128,8 +127,7 @@ struct TypeDeclaration {
   TypeId id;
   Type value;
 };
-using Declaration =
-    std::variant<TypeDeclaration, VariableDeclaration, FunctionDeclaration>;
+using Declaration = std::variant<TypeDeclaration, VariableDeclaration, FunctionDeclaration>;
 struct Let {
   std::vector<std::unique_ptr<Declaration>> declaration;
   std::vector<std::unique_ptr<Expr>> body;
@@ -222,8 +220,7 @@ bool VisitChildren(const IfThen& v, F&& f) {
 }
 template <class F>
 bool VisitChildren(const IfThenElse& v, F&& f) {
-  return std::invoke(f, *v.condition) && std::invoke(f, *v.then_expr) &&
-         std::invoke(f, *v.else_expr);
+  return std::invoke(f, *v.condition) && std::invoke(f, *v.then_expr) && std::invoke(f, *v.else_expr);
 }
 template <class F>
 bool VisitChildren(const While& v, F&& f) {
@@ -231,8 +228,7 @@ bool VisitChildren(const While& v, F&& f) {
 }
 template <class F>
 bool VisitChildren(const For& v, F&& f) {
-  return std::invoke(f, *v.start) && std::invoke(f, *v.end) &&
-         std::invoke(f, *v.body);
+  return std::invoke(f, *v.start) && std::invoke(f, *v.end) && std::invoke(f, *v.body);
 }
 template <class F>
 bool VisitChildren(const Parenthesized& v, F&& f) {

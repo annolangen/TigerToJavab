@@ -67,8 +67,7 @@ int main(int argc, char** argv) {
       class_name = "Main";
     }
 
-    std::cout << java::Compile(*driver.result, *symbols, types, class_name)
-              << std::endl;
+    std::cout << java::Compile(*driver.result, *symbols, types, class_name) << std::endl;
   }
 
   return 0;

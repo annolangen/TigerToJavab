@@ -15,6 +15,4 @@ inline constexpr std::string_view kBinaryOpNames[] = {"<NONE>"
 #undef DEF_BINARY_OPERATOR
 };
 
-inline std::ostream& operator<<(std::ostream& os, BinaryOp op) {
-  return os << kBinaryOpNames[static_cast<size_t>(op)];
-}
+inline std::ostream& operator<<(std::ostream& os, BinaryOp op) { return os << kBinaryOpNames[static_cast<size_t>(op)]; }

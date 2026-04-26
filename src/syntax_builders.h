@@ -11,8 +11,7 @@ V Add(V v, std::unique_ptr<T> e) {
   return std::move(v);
 }
 
-std::vector<FieldAssignment> Add(std::vector<FieldAssignment> v, std::string id,
-    std::unique_ptr<Expr> expr) {
+std::vector<FieldAssignment> Add(std::vector<FieldAssignment> v, std::string id, std::unique_ptr<Expr> expr) {
   v.emplace_back(FieldAssignment{std::move(id), std::move(expr)});
   return std::move(v);
 }

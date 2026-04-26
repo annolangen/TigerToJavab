@@ -11,8 +11,7 @@ namespace {
 using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::Equals;
 
-std::string Compile(
-    std::string_view text, std::string_view class_name = "Main") {
+std::string Compile(std::string_view text, std::string_view class_name = "Main") {
   std::unique_ptr<syntax::Expr> expr = testing::Parse(text);
   REQUIRE(expr != nullptr);
   std::unique_ptr<SymbolTable> st = SymbolTable::Build(*expr);
@@ -25,9 +24,7 @@ std::string Compile(
 }
 
 SCENARIO("JavaSource") {
-  GIVEN("Leaf Expression") {
-    REQUIRE_THAT(Compile("nil"), ContainsSubstring("null"));
-  }
+  GIVEN("Leaf Expression") { REQUIRE_THAT(Compile("nil"), ContainsSubstring("null")); }
   auto sanitize = [](std::string s) {
     s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
     return s;
@@ -40,7 +37,7 @@ let
 in
   arr1
 end)"),
-        Equals(R"(import java.util.Arrays;
+                 Equals(R"(import java.util.Arrays;
 
 class Scope0 {
 }
@@ -90,7 +87,7 @@ let
              diag2[r+7-c] := 0)
 in try(0) end
 )"),
-        Equals(R"(import java.util.Arrays;
+                 Equals(R"(import java.util.Arrays;
 
 class Scope0 {
 }

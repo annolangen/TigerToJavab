@@ -26,9 +26,7 @@ struct MappedIterator {
     ++iter;
     return *this;
   }
-  bool operator!=(const MappedIterator& other) const {
-    return iter != other.iter;
-  }
+  bool operator!=(const MappedIterator& other) const { return iter != other.iter; }
   auto operator*() const { return fn(*iter); }
 };
 
@@ -67,20 +65,17 @@ inline internal::Joined join(const std::string&& sep) { return {sep}; }
 }  // namespace util
 
 template <class F, class C>
-util::internal::MappedRange<F, C> operator|(
-    const C& container, util::internal::Mapped<F> mapped) {
+util::internal::MappedRange<F, C> operator|(const C& container, util::internal::Mapped<F> mapped) {
   return {container, mapped.fn};
 }
 
 template <class C>
-util::internal::JoinedRange<C> operator|(
-    const C& container, util::internal::Joined joined) {
+util::internal::JoinedRange<C> operator|(const C& container, util::internal::Joined joined) {
   return {joined.sep, container};
 }
 
 template <class C>
-std::ostream& operator<<(
-    std::ostream& os, const util::internal::JoinedRange<C>& joined) {
+std::ostream& operator<<(std::ostream& os, const util::internal::JoinedRange<C>& joined) {
   const static std::string empty;
   const std::string* sep = &empty;
   for (const auto& item : joined.range) {

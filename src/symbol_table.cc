@@ -19,20 +19,17 @@ const T* Lookup(const std::unordered_map<K, const T*>& map, K key) {
 // parent chain for the symbol.
 class St : public SymbolTable {
  public:
-  St(std::vector<std::unique_ptr<Scope>>&& scopes,
-      std::unordered_map<const Expr*, const Scope*>&& scope_by_expr)
+  St(std::vector<std::unique_ptr<Scope>>&& scopes, std::unordered_map<const Expr*, const Scope*>&& scope_by_expr)
       : scopes_(std::move(scopes)), scope_by_expr_(std::move(scope_by_expr)) {}
 
-  const FunctionDeclaration* lookupFunction(
-      const Expr& expr, std::string_view name) const override {
+  const FunctionDeclaration* lookupFunction(const Expr& expr, std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
       if (const auto* d = Lookup(s->function, name); d) return d;
     }
     return nullptr;
   }
 
-  StorageLocation lookupStorageLocation(
-      const Expr& expr, std::string_view name) const override {
+  StorageLocation lookupStorageLocation(const Expr& expr, std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
       if (auto it = s->storage.find(name); it != s->storage.end()) {
         return it->second;
@@ -41,12 +38,9 @@ class St : public SymbolTable {
     return nullptr;
   }
 
-  const Scope* getScope(const Expr& expr) const override {
-    return Lookup(scope_by_expr_, &expr);
-  }
+  const Scope* getScope(const Expr& expr) const override { return Lookup(scope_by_expr_, &expr); }
 
-  const Scope* getDefiningScope(
-      const Expr& expr, std::string_view name) const override {
+  const Scope* getDefiningScope(const Expr& expr, std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
       if (s->storage.find(name) != s->storage.end()) {
         return s;
@@ -55,23 +49,20 @@ class St : public SymbolTable {
     return nullptr;
   }
 
-  const VariableDeclaration* lookupVariable(
-      const Expr& expr, std::string_view name) const override {
+  const VariableDeclaration* lookupVariable(const Expr& expr, std::string_view name) const override {
     StorageLocation d = lookupStorageLocation(expr, name);
     if (auto v = std::get_if<const VariableDeclaration*>(&d); v) return *v;
     return nullptr;
   }
 
-  const TypeDeclaration* lookupType(
-      const Expr& expr, std::string_view name) const override {
+  const TypeDeclaration* lookupType(const Expr& expr, std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
       if (const auto* d = Lookup(s->type, name); d) return d;
     }
     return nullptr;
   }
 
-  const TypeDeclaration* lookupUnaliasedType(
-      const Expr& expr, std::string_view name) const override {
+  const TypeDeclaration* lookupUnaliasedType(const Expr& expr, std::string_view name) const override {
     const TypeDeclaration* decl = lookupType(expr, name);
     while (decl) {
       const auto* alias = std::get_if<Identifier>(&decl->value);
@@ -83,14 +74,11 @@ class St : public SymbolTable {
 
   std::string toString() const override {
     std::ostringstream out;
-    out << "SymbolTable{ #scopes: " << scopes_.size()
-        << ", #expr: " << scope_by_expr_.size() << " }";
+    out << "SymbolTable{ #scopes: " << scopes_.size() << ", #expr: " << scope_by_expr_.size() << " }";
     return out.str();
   }
 
-  const std::vector<std::unique_ptr<Scope>>& scopes() const override {
-    return scopes_;
-  }
+  const std::vector<std::unique_ptr<Scope>>& scopes() const override { return scopes_; }
 
  private:
   std::vector<std::unique_ptr<Scope>> scopes_;
@@ -142,13 +130,10 @@ struct StBuilder {
     current = scopes.back().get();
     // First pass: add all declarations to the new scope.
     for (const auto& decl : v.declaration) {
-      std::visit(Overloaded{[&](const TypeDeclaration& d) {
-        current->type[d.id] = &d;
-      }, [&](const FunctionDeclaration& d) { current->function[d.id] = &d; },
-                     [&](const VariableDeclaration& d) {
-        current->storage[d.id] = &d;
-      }},
-          *decl);
+      std::visit(Overloaded{[&](const TypeDeclaration& d) { current->type[d.id] = &d; },
+                            [&](const FunctionDeclaration& d) { current->function[d.id] = &d; },
+                            [&](const VariableDeclaration& d) { current->storage[d.id] = &d; }},
+                 *decl);
     }
     // Second pass: visit children to handle nested scopes and expressions.
     if (!VisitChildren(v, *this)) return false;
@@ -170,8 +155,7 @@ struct StBuilder {
 
   std::vector<std::unique_ptr<Scope>> scopes;
   std::unordered_map<const Expr*, const Scope*> scope_by_expr;
-  Scope* current =
-      (scopes.emplace_back(std::make_unique<Scope>()), scopes[0].get());
+  Scope* current = (scopes.emplace_back(std::make_unique<Scope>()), scopes[0].get());
 };
 }  // namespace
 

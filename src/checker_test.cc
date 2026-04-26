@@ -18,9 +18,7 @@ std::vector<std::string> Check(const char* text) {
   return errors;
 }
 
-bool StartsWith(std::string_view text, std::string_view prefix) {
-  return text.substr(0, prefix.size()) == prefix;
-}
+bool StartsWith(std::string_view text, std::string_view prefix) { return text.substr(0, prefix.size()) == prefix; }
 
 SCENARIO("Static checking", "[checker]") {
   GIVEN("Valid Record literal") {
@@ -51,8 +49,7 @@ SCENARIO("Static checking", "[checker]") {
         "let type Bulk = {height:int, weight:int} in "
         "Bulk {height=\"6 feet\", weight=200} end");
     REQUIRE(errors.size() == 1);
-    REQUIRE(errors[0] ==
-            "Different types string and int for field #1 of record Bulk");
+    REQUIRE(errors[0] == "Different types string and int for field #1 of record Bulk");
   }
   GIVEN("Wrong type") {
     std::vector<std::string> errors = Check(
@@ -62,8 +59,7 @@ SCENARIO("Static checking", "[checker]") {
     REQUIRE(errors[0] == "Unknown record type Heft");
   }
   GIVEN("Non record type") {
-    std::vector<std::string> errors =
-        Check("let type Bulk = int in Bulk {height=6, weight=200} end");
+    std::vector<std::string> errors = Check("let type Bulk = int in Bulk {height=6, weight=200} end");
     REQUIRE(errors.size() == 1);
     REQUIRE(errors[0] == "Type Bulk is not a record");
   }
@@ -94,8 +90,7 @@ SCENARIO("Static checking", "[checker]") {
     REQUIRE(errors.size() == 0);
   }
   GIVEN("string condition") {
-    for (auto e : {"if \"Hello\" then printi(6)", "if \"Hello\" then 7 else 8",
-             "while \"Hello\" do break"}) {
+    for (auto e : {"if \"Hello\" then printi(6)", "if \"Hello\" then 7 else 8", "while \"Hello\" do break"}) {
       auto errors = Check(e);
       REQUIRE(errors.size() == 1);
       REQUIRE(errors[0] == "Conditions must be int, but got string");
@@ -196,8 +191,7 @@ end)");
     }
 
     WHEN("assigning to a non-record type alias") {
-      auto errors = Check(
-          "let type notrecord = int var a:notrecord := 0 in a := nil end");
+      auto errors = Check("let type notrecord = int var a:notrecord := 0 in a := nil end");
       REQUIRE(errors.size() == 1);
       REQUIRE(errors[0] == "Type notrecord is not a record type");
     }
@@ -256,22 +250,19 @@ end)");
       REQUIRE(errors[0] == "Duplicate type definition: a");
     }
     WHEN("Duplicate function definition") {
-      auto errors =
-          Check("let function f():int=0 function f():string=\"s\" in 0 end");
+      auto errors = Check("let function f():int=0 function f():string=\"s\" in 0 end");
       REQUIRE(errors.size() == 1);
       REQUIRE(errors[0] == "Duplicate function definition: f");
     }
     WHEN("Variable init mismatch") {
       auto errors = Check("let var x:int := \"s\" in 0 end");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] ==
-              "Variable x declared type int but initialized with string");
+      REQUIRE(errors[0] == "Variable x declared type int but initialized with string");
     }
     WHEN("Function return mismatch") {
       auto errors = Check("let function f():int = \"s\" in 0 end");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] ==
-              "Function f declared to return int but body returns string");
+      REQUIRE(errors[0] == "Function f declared to return int but body returns string");
     }
     WHEN("Procedure return value") {
       auto errors = Check("let function f() = 5 in 0 end");
@@ -288,8 +279,7 @@ end)");
 
   GIVEN("Function call checks") {
     WHEN("Valid function call") {
-      auto errors = Check(
-          "let function f(a:int, b:string):int = a in f(5, \"hello\") end");
+      auto errors = Check("let function f(a:int, b:string):int = a in f(5, \"hello\") end");
       REQUIRE(errors.empty());
     }
     WHEN("Argument count mismatch") {
@@ -300,8 +290,7 @@ end)");
     WHEN("Argument type mismatch") {
       auto errors = Check("let function f(a:int):int = a in f(\"hello\") end");
       REQUIRE(errors.size() == 1);
-      REQUIRE(errors[0] ==
-              "Argument 1 of function f expects type int but got string");
+      REQUIRE(errors[0] == "Argument 1 of function f expects type int but got string");
     }
     WHEN("Argument type alias") {
       auto errors = Check(
@@ -310,8 +299,7 @@ end)");
       REQUIRE(errors.empty());
     }
     WHEN("Argument nil for record") {
-      auto errors =
-          Check("let type r = {x:int} function f(a:r):int = 0 in f(nil) end");
+      auto errors = Check("let type r = {x:int} function f(a:r):int = 0 in f(nil) end");
       REQUIRE(errors.empty());
     }
     WHEN("Argument nil for int") {
