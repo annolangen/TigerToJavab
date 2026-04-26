@@ -4,6 +4,25 @@ cmake_minimum_required(VERSION 3.12)
 
 project(TigerCompiler)
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(
+      -stdlib=libc++
+      -Wall 
+      -Wextra
+      -Wimplicit-fallthrough
+      -Wunreachable-code
+    )
+    add_link_options(-stdlib=libc++)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(FATAL_ERROR 
+        "This project requires the Clang compiler (clang++).\n"
+        "GCC's pedantic suppression of implicit move constructors for aggregates "
+        "containing move-only members (like std::unique_ptr) would require a "
+        "lot of boilerplate in the AST definitions.\n"
+        "Please run: cmake -DCMAKE_CXX_COMPILER=clang++ .."
+    )
+endif()
+
 # Set the C++ standard for the entire project
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

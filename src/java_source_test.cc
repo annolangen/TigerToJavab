@@ -25,10 +25,6 @@ std::string Compile(std::string_view text, std::string_view class_name = "Main")
 
 SCENARIO("JavaSource") {
   GIVEN("Leaf Expression") { REQUIRE_THAT(Compile("nil"), ContainsSubstring("null")); }
-  auto sanitize = [](std::string s) {
-    s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
-    return s;
-  };
   GIVEN("array type and an array variable") {
     REQUIRE_THAT(Compile(R"(
 let

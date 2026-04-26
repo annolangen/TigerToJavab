@@ -99,7 +99,12 @@ string \"[^\"]*\"
 {string}   return yy::Parser::make_STRING_CONSTANT(yytext, loc);
 {id}       return yy::Parser::make_IDENTIFIER(yytext, loc);
 .          driver.error(loc, std::string("invalid character '")+yytext+"'");
-<<EOF>>    return yy::Parser::make_EOF(loc);
+<<EOF>>    {
+  if (YY_START == C_COMMENT) {
+    driver.error(loc, "unterminated comment");
+  }
+  return yy::Parser::make_EOF(loc);
+ }
 
 <C_COMMENT>{
   "/*"                { comment_depth++; loc.columns(yyleng); }
@@ -107,7 +112,6 @@ string \"[^\"]*\"
   [^*\n/]+            { loc.columns(yyleng); }
   \n                  { loc.lines(yyleng); loc.step(); }
   .                   { loc.columns(yyleng); }
-  <<EOF>>             { driver.error(loc, "unterminated comment"); return yy::Parser::make_EOF(loc); }
 }
 %%
 

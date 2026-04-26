@@ -190,11 +190,11 @@ type_field: "identifier" ":" "identifier" { $$ = {$1, $3}; }
 ;
 type_fields_opt: %empty {} | type_fields { $$ = $1; };
 variable_declaration:
-"var" "identifier" ":=" expr { $$ = std::make_unique<Declaration>(VariableDeclaration{$2, $4}); }
+"var" "identifier" ":=" expr { $$ = std::make_unique<Declaration>(VariableDeclaration{$2, $4, {}}); }
 | "var" "identifier" ":" "identifier" ":=" expr { $$ = std::make_unique<Declaration>(VariableDeclaration{$2, $6, $4}); }
 ;
 function_declaration:
-"function" "identifier" "(" type_fields_opt ")" "=" expr { $$ = std::make_unique<Declaration>(FunctionDeclaration{$2, $4, $7}); }
+"function" "identifier" "(" type_fields_opt ")" "=" expr { $$ = std::make_unique<Declaration>(FunctionDeclaration{$2, $4, $7, {}}); }
 | "function" "identifier" "(" type_fields_opt ")" ":" "identifier" "=" expr { $$ = std::make_unique<Declaration>(FunctionDeclaration{$2, $4, $9, $7}); }
 ;
 %%

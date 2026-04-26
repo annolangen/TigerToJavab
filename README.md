@@ -9,13 +9,13 @@ compiler. The following list of packages is known to provide a working
 environment on Debian derived systems.
 
 ```
-sudo apt install clang make cmake bison flex default-jdk-headless
+sudo apt install clang make cmake bison flex default-jdk-headless libc++-dev libc++abi-dev
 ```
 
 To build from scratch, run the following commands:
 
 ```
-cmake -B build -S .
+cmake -DCMAKE_CXX_COMPILER=clang++ -B build -S .
 make -C build
 ```
 
