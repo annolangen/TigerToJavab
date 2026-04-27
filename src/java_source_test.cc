@@ -35,9 +35,6 @@ in
 end)"),
                  Equals(R"(import java.util.Arrays;
 
-class Scope0 {
-}
-
 class Scope1 {
   public Scope0 parent;
   public int[] arr1;
@@ -85,16 +82,13 @@ in try(0) end
 )"),
                  Equals(R"(import java.util.Arrays;
 
-class Scope0 {
-}
-
 class Scope1 {
   public Scope0 parent;
-  public int[] diag2;
-  public int[] diag1;
+  public int N;
   public int[] row;
   public int[] col;
-  public int N;
+  public int[] diag1;
+  public int[] diag2;
 }
 
 class Scope2 {

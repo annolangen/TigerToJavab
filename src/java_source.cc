@@ -27,27 +27,28 @@ std::string Sanitize(std::string id) {
   return kJavaKeywords.count(id) ? "_" + id : id;
 }
 
-std::string GetJavaType(TypeFinder& types, const SymbolTable& symbols, const syntax::Expr& expr, std::string_view t) {
-  if (t == "int") return "int";
-  if (t == "string") return "String";
-  if (t.empty() || t == "NOTYPE" || t == "void") return "Object";
-  if (const syntax::TypeDeclaration* decl = symbols.lookupUnaliasedType(expr, t)) {
+std::string GetJavaType(std::string_view type_id, const syntax::Expr& expr, TypeFinder& types,
+                        const SymbolTable& symbols) {
+  if (type_id.empty() || type_id == "NOTYPE" || type_id == "void") {
+    return "Object";
+  }
+  if (type_id == "int") return "int";
+  if (type_id == "string") return "String";
+  if (const syntax::TypeDeclaration* decl = symbols.lookupUnaliasedType(expr, type_id)) {
     if (auto arr = std::get_if<syntax::ArrayType>(&decl->value)) {
-      return GetJavaType(types, symbols, expr, arr->element_type_id) + "[]";
+      return GetJavaType(arr->element_type_id, expr, types, symbols) + "[]";
     }
   }
-  return Sanitize(std::string(t));
+  return Sanitize(std::string(type_id));
 }
 
-std::string GetJavaType(TypeFinder& types, const SymbolTable& symbols, const syntax::Expr& expr) {
-  return GetJavaType(types, symbols, expr, types(expr));
+std::string GetJavaType(const syntax::Expr& expr, TypeFinder& types, const SymbolTable& symbols) {
+  return GetJavaType(types(expr), expr, types, symbols);
 }
 
-std::string GetJavaType(TypeFinder& /*types*/, std::string_view t) {
-  if (t == "int") return "int";
-  if (t == "string") return "String";
-  if (t.empty() || t == "NOTYPE" || t == "void") return "Object";
-  return Sanitize(std::string(t));
+std::string GetJavaTypeFromOptional(std::optional<std::string_view> type_id, const syntax::Expr& expr,
+                                    TypeFinder& types, const SymbolTable& symbols) {
+  return type_id ? GetJavaType(*type_id, expr, types, symbols) : GetJavaType(expr, types, symbols);
 }
 
 bool NeedsSemicolon(TypeFinder& types, const syntax::Expr& expr) {
@@ -63,31 +64,64 @@ bool NeedsSemicolon(TypeFinder& types, const syntax::Expr& expr) {
   return true;
 }
 
-void PrintScopes(const SymbolTable& t, TypeFinder& tf, std::ostream& out) {
-  for (const auto& scope_ptr : t.scopes()) {
-    const Scope* scope = scope_ptr.get();
-    out << "class Scope" << scope->id << " {\n";
-    if (scope->parent) {
-      out << "  public Scope" << scope->parent->id << " parent;\n";
-    }
-    for (const auto& kv : scope->storage) {
-      std::visit(
-          Overloaded{[&](const syntax::VariableDeclaration* var) {
-                       std::string type = var->type_id ? GetJavaType(tf, t, *var->value, *var->type_id)
-                                                       : GetJavaType(tf, t, *var->value);
-                       out << "  public " << type << " " << Sanitize(std::string(kv.first)) << ";\n";
-                     },
-                     [&](const syntax::For*) { out << "  public int " << Sanitize(std::string(kv.first)) << ";\n"; },
-                     [&](const syntax::TypeField* param) {
-                       out << "  public " << GetJavaType(tf, param->type_id) << " " << Sanitize(std::string(kv.first))
-                           << ";\n";
-                     },
-                     [](std::nullptr_t) {}},
-          kv.second);
-    }
-    out << "}\n\n";
+struct ScopesPrinter {
+  const SymbolTable& t;
+  TypeFinder& tf;
+  std::ostream& out;
+  std::unordered_set<const Scope*> printed;
+  std::vector<const syntax::Expr*> expr_stack;
+
+  bool operator()(const syntax::Expr& expr) {
+    expr_stack.push_back(&expr);
+    bool keep_going = std::visit(*this, expr) && syntax::VisitChildren(expr, *this);
+    expr_stack.pop_back();
+    return keep_going;
   }
-}
+
+  bool operator()(const syntax::Declaration& d) { return std::visit(*this, d); }
+
+  bool operator()(const syntax::FunctionDeclaration& v) {
+    const Scope* scope = t.getScope(v);
+    if (scope == nullptr) std::cerr << "No scope for function " << v.id << std::endl;
+    if (scope && printed.count(scope) == 0 && !expr_stack.empty()) {
+      printed.insert(scope);
+      PrintIntro(*scope);
+      for (const auto& param : v.parameter) {
+        out << "  public " << GetJavaType(param.type_id, *expr_stack.back(), tf, t) << " " << Sanitize(param.id)
+            << ";\n";
+      }
+      out << "}\n\n";
+    }
+    return syntax::VisitChildren(v, *this);
+  }
+
+  bool operator()(const syntax::Let& let) {
+    const Scope* scope = t.getScope(let);
+    if (scope == nullptr) std::cerr << "No scope for let " << DebugString(*expr_stack.back()) << std::endl;
+    if (scope && printed.count(scope) == 0) {
+      printed.insert(scope);
+      PrintIntro(*scope);
+      for (const auto& decl : let.declaration) {
+        const syntax::VariableDeclaration* var = std::get_if<syntax::VariableDeclaration>(decl.get());
+        if (var) {
+          out << "  public " << GetJavaTypeFromOptional(var->type_id, *var->value, tf, t) << " " << Sanitize(var->id)
+              << ";\n";
+        }
+      }
+      out << "}\n\n";
+    }
+    return syntax::VisitChildren(let, *this);
+  }
+
+  bool operator()(const auto& e) { return syntax::VisitChildren(e, *this); }
+
+  void PrintIntro(const Scope& scope) {
+    out << "class Scope" << scope.id << " {\n";
+    if (scope.parent) {
+      out << "  public Scope" << scope.parent->id << " parent;\n";
+    }
+  }
+};
 
 struct Compiler {
   const SymbolTable& symbols;
@@ -211,7 +245,7 @@ struct Compiler {
   }
   void operator()(const syntax::RecordLiteral& expr) { out << "new " << Sanitize(expr.type_id) << "()"; }
   void operator()(const syntax::ArrayLiteral& expr) {
-    out << "new " << GetJavaType(types, symbols, *expr.value) << "[";
+    out << "new " << GetJavaType(*expr.value, types, symbols) << "[";
     Compile(*expr.size);
     out << "];\n";
     if (current_lvalue.empty()) return;
@@ -290,7 +324,7 @@ struct Compiler {
     std::ostringstream fn_out;
     fn_out << "\n"
            << indent() << "static "
-           << (expr.type_id ? GetJavaType(types, symbols, *current_expr, *expr.type_id) : "void") << " "
+           << (expr.type_id ? GetJavaType(*expr.type_id, *current_expr, types, symbols) : "void") << " "
            << Sanitize(expr.id) << "(";
     const char* sep = "";
     if (req_scope) {
@@ -298,7 +332,7 @@ struct Compiler {
       sep = ", ";
     }
     for (const auto& arg : expr.parameter) {
-      fn_out << sep << GetJavaType(types, arg.type_id) << " " << Sanitize(arg.id);
+      fn_out << sep << GetJavaType(arg.type_id, *current_expr, types, symbols) << " " << Sanitize(arg.id);
       sep = ", ";
     }
     fn_out << ") {\n";
@@ -350,8 +384,8 @@ struct Compiler {
                          if (auto fields = std::get_if<syntax::TypeFields>(&type.value)) {
                            post_body << "class " << Sanitize(type.id) << " {\n";
                            for (auto& field : *fields) {
-                             post_body << "  public " << GetJavaType(types, field.type_id) << " " << Sanitize(field.id)
-                                       << ";\n";
+                             post_body << "  public " << GetJavaType(field.type_id, *current_expr, types, symbols)
+                                       << " " << Sanitize(field.id) << ";\n";
                            }
                            post_body << "}\n\n";
                          }
@@ -407,7 +441,7 @@ std::string Compile(const syntax::Expr& expr, const SymbolTable& t, TypeFinder& 
 
   head << "import java.util.Arrays;\n\n";
 
-  PrintScopes(t, tf, head);
+  ScopesPrinter{t, tf, head, {}, {}}(expr);
 
   body << "class " << class_name << " {\n\n";
   body << "  public static void main(String[] args) {\n";

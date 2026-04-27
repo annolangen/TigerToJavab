@@ -73,8 +73,10 @@ class SymbolTable {
   template <typename T>
   StorageLocation lookupStorageLocation(const T&, std::string_view) const = delete;
 
-  // Returns the immediate scope for a given expression.
+  // Returns the immediate scope for a given expression, or scope defining AST
   virtual const Scope* getScope(const syntax::Expr& expr) const = 0;
+  virtual const Scope* getScope(const syntax::FunctionDeclaration&) const = 0;
+  virtual const Scope* getScope(const syntax::Let&) const = 0;
 
   template <typename T>
   const Scope* getScope(const T&) const = delete;

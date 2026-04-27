@@ -19,8 +19,13 @@ const T* Lookup(const std::unordered_map<K, const T*>& map, K key) {
 // parent chain for the symbol.
 class St : public SymbolTable {
  public:
-  St(std::vector<std::unique_ptr<Scope>>&& scopes, std::unordered_map<const Expr*, const Scope*>&& scope_by_expr)
-      : scopes_(std::move(scopes)), scope_by_expr_(std::move(scope_by_expr)) {}
+  St(std::vector<std::unique_ptr<Scope>> scopes, std::unordered_map<const Expr*, const Scope*> scope_by_expr,
+     std::unordered_map<const Let*, const Scope*> scope_by_let,
+     std::unordered_map<const FunctionDeclaration*, const Scope*> scope_by_function)
+      : scopes_(std::move(scopes)),
+        scope_by_expr_(std::move(scope_by_expr)),
+        scope_by_let_(std::move(scope_by_let)),
+        scope_by_function_(std::move(scope_by_function)) {}
 
   const FunctionDeclaration* lookupFunction(const Expr& expr, std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
@@ -39,6 +44,8 @@ class St : public SymbolTable {
   }
 
   const Scope* getScope(const Expr& expr) const override { return Lookup(scope_by_expr_, &expr); }
+  const Scope* getScope(const FunctionDeclaration& v) const override { return Lookup(scope_by_function_, &v); }
+  const Scope* getScope(const Let& v) const override { return Lookup(scope_by_let_, &v); }
 
   const Scope* getDefiningScope(const Expr& expr, std::string_view name) const override {
     for (const Scope* s = Lookup(scope_by_expr_, &expr); s; s = s->parent) {
@@ -83,6 +90,8 @@ class St : public SymbolTable {
  private:
   std::vector<std::unique_ptr<Scope>> scopes_;
   std::unordered_map<const Expr*, const Scope*> scope_by_expr_;
+  std::unordered_map<const Let*, const Scope*> scope_by_let_;
+  std::unordered_map<const FunctionDeclaration*, const Scope*> scope_by_function_;
 };
 
 // A visitor that creates and populates all the Scopes. FunctionDeclaration and
@@ -106,6 +115,7 @@ struct StBuilder {
     Scope* prev = current;
     scopes.emplace_back(std::make_unique<Scope>(scopes.size(), current));
     current = scopes.back().get();
+    scope_by_function[&v] = current;
     for (const TypeField& p : v.parameter) {
       current->storage[p.id] = &p;
     }
@@ -128,6 +138,8 @@ struct StBuilder {
     Scope* prev = current;
     scopes.emplace_back(std::make_unique<Scope>(scopes.size(), current));
     current = scopes.back().get();
+    scope_by_let[&v] = current;
+
     // First pass: add all declarations to the new scope.
     for (const auto& decl : v.declaration) {
       std::visit(Overloaded{[&](const TypeDeclaration& d) { current->type[d.id] = &d; },
@@ -151,10 +163,14 @@ struct StBuilder {
     return true;
   }
 
-  St Build() { return St(std::move(scopes), std::move(scope_by_expr)); }
+  St Build() {
+    return St(std::move(scopes), std::move(scope_by_expr), std::move(scope_by_let), std::move(scope_by_function));
+  }
 
   std::vector<std::unique_ptr<Scope>> scopes;
   std::unordered_map<const Expr*, const Scope*> scope_by_expr;
+  std::unordered_map<const Let*, const Scope*> scope_by_let;
+  std::unordered_map<const FunctionDeclaration*, const Scope*> scope_by_function;
   Scope* current = (scopes.emplace_back(std::make_unique<Scope>()), scopes[0].get());
 };
 }  // namespace
