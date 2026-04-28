@@ -64,21 +64,24 @@ bool NeedsSemicolon(TypeFinder& types, const syntax::Expr& expr) {
   return true;
 }
 
-struct ScopesPrinter {
+struct ScopesPrinter : syntax::VisitorBase<ScopesPrinter> {
+  using super::operator();
   const SymbolTable& t;
   TypeFinder& tf;
   std::ostream& out;
   std::unordered_set<const Scope*> printed;
   std::vector<const syntax::Expr*> expr_stack;
 
+  ScopesPrinter(const SymbolTable& t, TypeFinder& tf, std::ostream& out) : t(t), tf(tf), out(out) {}
+
   bool operator()(const syntax::Expr& expr) {
     expr_stack.push_back(&expr);
-    bool keep_going = std::visit(*this, expr) && syntax::VisitChildren(expr, *this);
+    bool keep_going = Visit(expr);
     expr_stack.pop_back();
     return keep_going;
   }
 
-  bool operator()(const syntax::Declaration& d) { return std::visit(*this, d); }
+  bool operator()(const syntax::Declaration& d) { return Visit(d); }
 
   bool operator()(const syntax::FunctionDeclaration& v) {
     const Scope* scope = t.getScope(v);
@@ -172,6 +175,13 @@ struct Compiler {
   void operator()(const syntax::Identifier& expr) {
     const Scope* def_scope = current_expr ? symbols.getDefiningScope(*current_expr, expr) : nullptr;
     if (def_scope && local_scope) {
+      // If it's a for loop variable, it's not in the Scope object in the current
+      // translation, so we access it as a local Java variable.
+      auto loc = symbols.lookupStorageLocation(*current_expr, expr);
+      if (std::holds_alternative<const syntax::For*>(loc)) {
+        out << Sanitize(expr);
+        return;
+      }
       out << GetScopePath(def_scope) << "." << Sanitize(expr);
     } else {
       out << Sanitize(expr);
@@ -441,7 +451,7 @@ std::string Compile(const syntax::Expr& expr, const SymbolTable& t, TypeFinder& 
 
   head << "import java.util.Arrays;\n\n";
 
-  ScopesPrinter{t, tf, head, {}, {}}(expr);
+  ScopesPrinter(t, tf, head)(expr);
 
   body << "class " << class_name << " {\n\n";
   body << "  public static void main(String[] args) {\n";

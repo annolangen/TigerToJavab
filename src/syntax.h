@@ -141,13 +141,75 @@ struct Overloaded : F... {
 template <class... F>
 Overloaded(F...) -> Overloaded<F...>;
 
-// Overloaded template function for visiting child nodes. Returns false to
-// indicate stop.
-// NOTE: This utility allows generic traversal over both `std::variant` nodes
-// (like `Expr`, `Declaration`) and concrete structs (like `IfThen`, `For`).
-// When visiting a variant, it automatically dispatches to the active
-// alternative. Use this for recursive checkers to avoid writing manual
-// `std::visit` boilerplate.
+// A base class for AST visitors that handles dispatching for variant types
+// (Expr, Declaration, Type, LValue) and unwraps unique_ptrs automatically.
+// Uses the Curiously Recurring Template Pattern (CRTP).
+template <typename Derived>
+struct VisitorBase {
+  // Named helpers for cleaner calls from derived classes
+  bool Visit(const Expr& v) { return (*this)(v); }
+  bool Visit(const Declaration& v) { return (*this)(v); }
+  bool Visit(const Type& v) { return (*this)(v); }
+  bool Visit(const LValue& v) { return (*this)(v); }
+
+  bool operator()(const Expr& v) { return std::visit(derived(), v); }
+  bool operator()(const Declaration& v) { return std::visit(derived(), v); }
+  bool operator()(const Type& v) { return std::visit(derived(), v); }
+  bool operator()(const LValue& v) { return std::visit(derived(), v); }
+
+  bool operator()(const std::unique_ptr<Expr>& v) { return derived()(*v); }
+  bool operator()(const std::unique_ptr<LValue>& v) { return derived()(*v); }
+  bool operator()(const std::unique_ptr<Declaration>& v) { return derived()(*v); }
+
+ protected:
+  using super = VisitorBase<Derived>;
+
+ private:
+  Derived& derived() { return static_cast<Derived&>(*this); }
+};
+
+// Overloaded template function for visiting child nodes.
+//
+// ### Usage in AST Traversal
+// `VisitChildren(node, f)` visits only the **immediate children** of the
+// given node. It does **not** invoke the visitor or handler on the node itself.
+//
+// #### 1. Explicit Traversal (Visitor Pattern)
+// A **Visitor** is responsible for controlling the traversal flow **explicitly**.
+// It should typically inherit from `VisitorBase` to handle variant dispatching.
+// ```cpp
+// struct MyVisitor : VisitorBase<MyVisitor> {
+//   using super::operator(); // Import base overloads
+//
+//   bool operator()(const Binary& b) {
+//     // Process 'b' here (Pre-order logic)
+//     return VisitChildren(b, *this); // Recurse explicitly
+//   }
+//   bool operator()(const Expr& e) {
+//     // Custom logic for the expression variant
+//     return Visit(e); // Dispatch to specific type (Binary, Let, etc.)
+//   }
+//   bool operator()(const auto& node) {
+//     return VisitChildren(node, *this); // Default recursion
+//   }
+// };
+// ```
+//
+// #### 2. Implicit Traversal (Handler Pattern)
+// A **Handler** deals only with the logic for a specific node type and leaves
+// the traversal to an external driver like `Walk`.
+//
+// You can use a named struct or the `Overloaded` helper for an ad-hoc handler:
+// ```cpp
+// Walk(root, Overloaded{
+//   [](const IntegerConstant& i) { std::cout << i << "\n"; },
+//   [](const auto&) {} // Catch-all required if not handling all types
+// });
+// ```
+//
+// ### Return Value
+// Returns `false` if any visitor call returned `false`, indicating that
+// traversal should stop early. Otherwise returns `true`.
 template <class F>
 bool VisitChildren(const StringConstant&, F&&) {
   return true;
@@ -278,5 +340,18 @@ bool VisitChildren(const Let& v, F&& f) {
     if (!std::invoke(f, *e)) return false;
   }
   return true;
+}
+
+// Performs a generic pre-order traversal (Implicit Traversal / Handler Style).
+// Invokes `h(node)` then recursively walks all children.
+// If `h` returns `bool`, traversal stops when it returns `false`.
+template <class Node, class H>
+bool Walk(const Node& node, H&& h) {
+  if constexpr (std::is_invocable_r_v<bool, H, const Node&>) {
+    if (!std::invoke(h, node)) return false;
+  } else {
+    std::invoke(h, node);
+  }
+  return VisitChildren(node, [&](const auto& child) { return Walk(child, h); });
 }
 }  // namespace syntax

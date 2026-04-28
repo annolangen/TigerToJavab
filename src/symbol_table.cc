@@ -97,7 +97,9 @@ class St : public SymbolTable {
 // A visitor that creates and populates all the Scopes. FunctionDeclaration and
 // Let create a new Scope. The `Build` function transfers ownership of the
 // Scopes and the map of Expr to Scope to the returned SymbolTable.
-struct StBuilder {
+struct StBuilder : VisitorBase<StBuilder> {
+  using super::operator();
+
   template <class T>
   bool operator()(const T& v) {
     return VisitChildren(v, *this);
@@ -105,10 +107,8 @@ struct StBuilder {
 
   bool operator()(const Expr& v) {
     scope_by_expr[&v] = current;
-    return VisitChildren(v, *this);
+    return Visit(v);
   }
-
-  bool operator()(const Declaration& d) { return std::visit(*this, d); }
 
   bool operator()(const FunctionDeclaration& v) {
     current->function[v.id] = &v;
@@ -154,13 +154,13 @@ struct StBuilder {
   }
 
   bool operator()(const For& v) {
-    Scope* prev = current;
-    scopes.emplace_back(std::make_unique<Scope>(scopes.size(), current));
-    current = scopes.back().get();
+    // TODO: A For loop should semantically have its own scope to handle
+    // shadowing and capturing of the loop variable by nested functions.
+    // For now, we share the parent scope to stay compatible with the
+    // Java code generator, but we add the variable to the symbol table
+    // so the checker can prevent assignments to it.
     current->storage[v.id] = &v;
-    if (!VisitChildren(v, *this)) return false;
-    current = prev;
-    return true;
+    return VisitChildren(v, *this);
   }
 
   St Build() {
